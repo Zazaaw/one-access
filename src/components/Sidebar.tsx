@@ -53,10 +53,13 @@ export function Sidebar() {
             </nav>
 
             <div className="px-6 py-10 space-y-2 border-t border-slate-800/50">
-                <button className="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-slate-500 hover:bg-slate-800/50 hover:text-slate-300 transition-all">
+                <Link
+                    href="/settings"
+                    className="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-slate-500 hover:bg-slate-800/50 hover:text-slate-300 transition-all"
+                >
                     <Settings className="w-5 h-5 shrink-0" />
                     <span className="hidden lg:block font-bold text-sm tracking-wide">Settings</span>
-                </button>
+                </Link>
                 <button
                     onClick={logout}
                     className="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-rose-500/60 hover:bg-rose-500/5 hover:text-rose-400 transition-all"
