@@ -5,6 +5,7 @@ export interface Subject {
     display_name: string;
     subject_type: SubjectType;
     nik_sap?: string;
+    avatar_url?: string;
 }
 
 export interface Application {

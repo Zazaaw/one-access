@@ -5,14 +5,54 @@ import {
   ShieldCheck,
   ArrowRight,
   Globe,
-  LayoutColumns,
-  Zap
+  Zap,
+  AppWindow
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { loginAction } from "@/lib/actions/auth";
+import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
-  const [isHovered, setIsHovered] = useState(false);
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const systemEmail = identifier.includes('@') ? identifier : `${identifier.trim()}@hcis.local`;
+
+      console.log('Attempting Login:', { systemEmail, password });
+
+      const formData = new FormData();
+      formData.append('email', systemEmail);
+      formData.append('password', password);
+
+      const result = await loginAction(formData);
+
+      if (!result.success) {
+        setError(result.message === 'Invalid login credentials'
+          ? 'NIK atau password salah. Silakan coba lagi.'
+          : result.message || 'Login failed');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('Login successful, redirecting...');
+      window.location.href = '/dashboard';
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError('Terjadi kesalahan sistem. Silakan coba beberapa saat lagi.');
+      setIsLoading(false);
+    }
+  };
 
   return (
     <main className="min-h-screen relative flex items-center justify-center overflow-hidden px-6">
@@ -72,16 +112,25 @@ export default function LandingPage() {
 
             <div className="space-y-2">
               <h2 className="text-2xl font-bold text-white">Sign In</h2>
-              <p className="text-sm text-slate-500 text-pretty">Gunakan identitas korporat LDAP atau Email PTPN Anda.</p>
+              <p className="text-sm text-slate-500 text-pretty">Gunakan identitas korporat PTPN Anda.</p>
             </div>
 
-            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+            {error && (
+              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold">
+                {error}
+              </div>
+            )}
+
+            <form className="space-y-4" onSubmit={handleLogin}>
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Identity / NIK</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Identity / NIK SAP</label>
                 <input
                   type="text"
-                  placeholder="NIK atau Username"
+                  placeholder="Contoh: 3023255"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 transition-all focus:ring-4 focus:ring-emerald-500/5"
+                  required
                 />
               </div>
 
@@ -90,13 +139,20 @@ export default function LandingPage() {
                 <input
                   type="password"
                   placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 transition-all focus:ring-4 focus:ring-emerald-500/5"
+                  required
                 />
               </div>
 
-              <button className="glow-button w-full flex items-center justify-center gap-2 group mt-2">
-                Launch Services
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="glow-button w-full flex items-center justify-center gap-2 group mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Authenticating...' : 'Launch Services'}
+                {!isLoading && <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />}
               </button>
             </form>
 

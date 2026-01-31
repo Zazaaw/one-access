@@ -17,6 +17,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
+import { createClient } from "@/lib/supabase/client";
 
 const IconMap: Record<string, any> = {
     ShieldCheck,
@@ -31,11 +32,31 @@ export default function AccessRightsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
 
+    const [lastLogin, setLastLogin] = useState<string>("Baru saja");
+
     useEffect(() => {
         if (user) {
             fetchAccess();
+            fetchLastLogin();
         }
     }, [user]);
+
+    const fetchLastLogin = async () => {
+        try {
+            const { data: logs } = await createClient()
+                .from('hr_audit_logs')
+                .select('created_at')
+                .eq('subject_id', user?.subject_id)
+                .eq('action', 'login')
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (logs?.[0]) {
+                const date = new Date(logs[0].created_at);
+                setLastLogin(date.toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }));
+            }
+        } catch (e) { }
+    }
 
     const fetchAccess = async () => {
         setIsLoading(true);
@@ -98,7 +119,7 @@ export default function AccessRightsPage() {
                             <div className="text-center md:text-left">
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Terakhir Login</p>
                                 <div className="flex items-center gap-2 text-white font-black text-sm uppercase">
-                                    <History className="w-4 h-4 text-slate-500" /> Hari ini, 19:42
+                                    <History className="w-4 h-4 text-slate-500" /> {lastLogin}
                                 </div>
                             </div>
                         </div>

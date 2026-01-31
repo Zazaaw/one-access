@@ -44,6 +44,24 @@ export default function DashboardPage() {
             const res = await fetch('/api/my-apps');
             const data = await res.json();
             setApps(data);
+
+            // Audit Log: Login (Client-side trigger on first load)
+            if (user && !sessionStorage.getItem('login_audited')) {
+                fetch('/api/audit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        subject_id: user.subject_id,
+                        action: 'login',
+                        metadata: {
+                            device: navigator.userAgent.split(' (')[1]?.split(';')[0] || 'Unknown Device',
+                            location: 'Enterprise Portal',
+                            ip: 'client-ip'
+                        }
+                    })
+                });
+                sessionStorage.setItem('login_audited', 'true');
+            }
         } catch (error) {
             console.error("Failed to fetch apps", error);
         } finally {
@@ -53,6 +71,36 @@ export default function DashboardPage() {
 
     const handleLaunchApp = async (app: Application) => {
         if (!user) return;
+
+        let finalUrl = app.launch_url;
+        let protocolUrl = "";
+
+        // Define protocols for specific apps
+        if (app.app_name.toLowerCase().includes("iam")) {
+            protocolUrl = `web+ptpn-iam://`;
+        } else if (app.app_name.toLowerCase().includes("command center")) {
+            protocolUrl = `web+hcis-cc://`;
+        } else if (app.app_name.toLowerCase().includes("tracker")) {
+            protocolUrl = `web+hcis-tracker://`;
+        }
+
+        // SSO: Append tokens if available and app is internal (localhost or known domain)
+        try {
+            const supabase = await import('@/lib/supabase/client').then(m => m.createClient());
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (session?.access_token && session?.refresh_token) {
+                const separator = app.launch_url.includes('?') ? '&' : '?';
+                const tokens = `access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
+                finalUrl = `${app.launch_url}${separator}${tokens}`;
+                if (protocolUrl) {
+                    protocolUrl = `${protocolUrl}?${tokens}`;
+                }
+            }
+        } catch (err) {
+            console.warn("Failed to attach SSO tokens:", err);
+        }
+
         try {
             await fetch('/api/audit', {
                 method: 'POST',
@@ -67,7 +115,32 @@ export default function DashboardPage() {
         } catch (e) {
             console.error("Audit logging failed", e);
         }
-        window.open(app.launch_url, '_blank');
+
+        if (protocolUrl) {
+            // Attempt to open the PWA via protocol handler
+            const start = Date.now();
+            let hasOpenedPWA = false;
+
+            // Blur listener to detect if the PWA window took focus
+            const onBlur = () => {
+                hasOpenedPWA = true;
+                window.removeEventListener('blur', onBlur);
+            };
+            window.addEventListener('blur', onBlur);
+
+            // Trigger protocol
+            window.location.href = protocolUrl;
+
+            // Precision fallback: if focus hasn't shifted within 1.5s, open in browser
+            setTimeout(() => {
+                window.removeEventListener('blur', onBlur);
+                if (!hasOpenedPWA && (Date.now() - start < 2000)) {
+                    window.open(finalUrl, '_blank');
+                }
+            }, 1500);
+        } else {
+            window.open(finalUrl, '_blank');
+        }
     };
 
     const filteredApps = apps.filter(app =>
@@ -81,6 +154,11 @@ export default function DashboardPage() {
                 <Loader2 className="w-10 h-10 animate-spin text-emerald-500" />
             </div>
         );
+    }
+
+    if (!user) {
+        window.location.href = '/';
+        return null;
     }
 
     return (

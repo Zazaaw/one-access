@@ -8,13 +8,14 @@ import {
     Users,
     Settings,
     LogOut,
-    ShieldCheck
+    ShieldCheck,
+    Loader2
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 export function Sidebar() {
     const pathname = usePathname();
-    const { logout } = useAuth();
+    const { logout, isLoading } = useAuth();
 
     const menuItems = [
         { icon: LayoutGrid, label: "Dashboard", href: "/dashboard" },
@@ -61,11 +62,21 @@ export function Sidebar() {
                     <span className="hidden lg:block font-bold text-sm tracking-wide">Settings</span>
                 </Link>
                 <button
-                    onClick={logout}
-                    className="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-rose-500/60 hover:bg-rose-500/5 hover:text-rose-400 transition-all"
+                    onClick={() => {
+                        console.log("Logout button clicked");
+                        logout();
+                    }}
+                    disabled={isLoading}
+                    className="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-rose-500/60 hover:bg-rose-500/5 hover:text-rose-400 transition-all font-bold disabled:opacity-50"
                 >
-                    <LogOut className="w-5 h-5 shrink-0" />
-                    <span className="hidden lg:block font-bold text-sm tracking-wide">Logout</span>
+                    {isLoading ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                        <LogOut className="w-5 h-5 shrink-0" />
+                    )}
+                    <span className="hidden lg:block font-bold text-sm tracking-wide">
+                        {isLoading ? 'Logging out...' : 'Logout'}
+                    </span>
                 </button>
             </div>
         </aside>
