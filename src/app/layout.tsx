@@ -37,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id">
+    <html lang="id" suppressHydrationWarning>
       <body className={`${inter.variable} antialiased selection:bg-emerald-500/30 selection:text-emerald-200`}>
         <AuthProvider>
           {children}

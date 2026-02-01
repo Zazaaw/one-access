@@ -43,7 +43,11 @@ export default function DashboardPage() {
         try {
             const res = await fetch('/api/my-apps');
             const data = await res.json();
-            setApps(data);
+            if (Array.isArray(data)) {
+                setApps(data);
+            } else {
+                setApps([]);
+            }
 
             // Audit Log: Login (Client-side trigger on first load)
             if (user && !sessionStorage.getItem('login_audited')) {

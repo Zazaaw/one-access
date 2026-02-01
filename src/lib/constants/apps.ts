@@ -58,5 +58,15 @@ export const ALL_APPLICATIONS = [
         description: "Layanan mandiri karyawan untuk pengajuan cuti, lembur, dan data pribadi.",
         category: "Operational",
         is_pwa: true
+    },
+    {
+        id: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+        app_code: "PLATFORM",
+        app_name: "Platform Services Console",
+        launch_url: "http://localhost:3008",
+        icon_name: "Globe",
+        description: "Pusat kendali layanan integrasi, notifikasi, dan workflow lintas aplikasi.",
+        category: "Infrastructure",
+        is_pwa: false
     }
 ];

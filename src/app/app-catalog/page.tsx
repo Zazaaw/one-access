@@ -107,7 +107,12 @@ export default function AppCatalogPage() {
             const myAppsData = await myAppsRes.json();
 
             setAllApps(catalogData);
-            setMyAppIds(myAppsData.map((app: Application) => app.id));
+            if (Array.isArray(myAppsData)) {
+                setMyAppIds(myAppsData.map((app: Application) => app.id));
+            } else {
+                setMyAppIds([]);
+            }
+
         } catch (error) {
             console.error("Failed to fetch catalog", error);
         } finally {
