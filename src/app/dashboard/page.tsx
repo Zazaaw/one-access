@@ -73,16 +73,6 @@ export default function DashboardPage() {
         if (!user) return;
 
         let finalUrl = app.launch_url;
-        let protocolUrl = "";
-
-        // Define protocols for specific apps
-        if (app.app_name.toLowerCase().includes("iam")) {
-            protocolUrl = `web+ptpn-iam://`;
-        } else if (app.app_name.toLowerCase().includes("command center")) {
-            protocolUrl = `web+hcis-cc://`;
-        } else if (app.app_name.toLowerCase().includes("tracker")) {
-            protocolUrl = `web+hcis-tracker://`;
-        }
 
         // SSO: Append tokens if available and app is internal (localhost or known domain)
         try {
@@ -93,9 +83,6 @@ export default function DashboardPage() {
                 const separator = app.launch_url.includes('?') ? '&' : '?';
                 const tokens = `access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
                 finalUrl = `${app.launch_url}${separator}${tokens}`;
-                if (protocolUrl) {
-                    protocolUrl = `${protocolUrl}?${tokens}`;
-                }
             }
         } catch (err) {
             console.warn("Failed to attach SSO tokens:", err);
@@ -116,31 +103,7 @@ export default function DashboardPage() {
             console.error("Audit logging failed", e);
         }
 
-        if (protocolUrl) {
-            // Attempt to open the PWA via protocol handler
-            const start = Date.now();
-            let hasOpenedPWA = false;
-
-            // Blur listener to detect if the PWA window took focus
-            const onBlur = () => {
-                hasOpenedPWA = true;
-                window.removeEventListener('blur', onBlur);
-            };
-            window.addEventListener('blur', onBlur);
-
-            // Trigger protocol
-            window.location.href = protocolUrl;
-
-            // Precision fallback: if focus hasn't shifted within 1.5s, open in browser
-            setTimeout(() => {
-                window.removeEventListener('blur', onBlur);
-                if (!hasOpenedPWA && (Date.now() - start < 2000)) {
-                    window.open(finalUrl, '_blank');
-                }
-            }, 1500);
-        } else {
-            window.open(finalUrl, '_blank');
-        }
+        window.open(finalUrl, '_blank');
     };
 
     const filteredApps = apps.filter(app =>
