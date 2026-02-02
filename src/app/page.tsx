@@ -27,7 +27,7 @@ export default function LandingPage() {
     setError(null);
 
     try {
-      const systemEmail = identifier.includes('@') ? identifier : `${identifier.trim()}@hcis.local`;
+      const systemEmail = identifier.includes('@') ? identifier : `${identifier.trim().toLowerCase()}@hcis.local`;
 
       console.log('Attempting Login:', { systemEmail, password });
 
