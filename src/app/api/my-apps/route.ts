@@ -24,10 +24,18 @@ export async function GET(request: Request) {
         return NextResponse.json([]);
     }
 
-    // 2. Fetch real assignments from subject_app_roles
+    // 2. Fetch real assignments from subject_app_roles AND application details from iam_applications
     const { data: assignments, error: dbError } = await supabase
         .from('subject_app_roles')
-        .select('app_id')
+        .select(`
+            app_id,
+            iam_applications (
+                id,
+                app_name,
+                app_description,
+                app_code
+            )
+        `)
         .eq('subject_id', subject.id)
         .eq('is_active', true);
 
@@ -36,10 +44,26 @@ export async function GET(request: Request) {
         return NextResponse.json([]);
     }
 
-    const assignedIds = assignments.map(a => a.app_id);
+    // 3. Map DB assignments to ALL_APPLICATIONS config (merging DB data with UI config)
+    // We use the static config for Icons, Categories, and Launch URLs (which might be env dependent),
+    // but we prefer the DB for Name and Description to ensure alignment with IAM.
+    const myApps = assignments.map((assignment: any) => {
+        const dbApp = assignment.iam_applications;
+        // Find the matching UI config by ID (preferred) or App Code
+        const uiConfig = ALL_APPLICATIONS.find(app =>
+            app.id === dbApp.id || app.app_code === dbApp.app_code
+        );
 
-    // 3. Filter the catalog based on DB assignments
-    const myApps = ALL_APPLICATIONS.filter(app => assignedIds.includes(app.id));
+        if (!uiConfig) return null;
+
+        return {
+            ...uiConfig,
+            // Override with DB values to be the "Single Source of Truth"
+            app_name: dbApp.app_name,
+            description: dbApp.app_description,
+            id: dbApp.id // Ensure ID matches DB
+        };
+    }).filter(app => app !== null);
 
     return NextResponse.json(myApps);
 }
