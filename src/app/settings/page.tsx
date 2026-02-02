@@ -243,7 +243,17 @@ export default function SettingsPage() {
                 return;
             }
 
-            const payload = { currentPassword: passwordForm.current, newPassword: passwordForm.new };
+            if (action === 'password') {
+                if (passwordForm.new !== passwordForm.confirm) {
+                    throw new Error("Password baru dan konfirmasi tidak cocok");
+                }
+            }
+
+            const payload = {
+                currentPassword: passwordForm.current,
+                newPassword: passwordForm.new,
+                confirmPassword: passwordForm.confirm
+            };
 
             const res = await fetch('/api/settings/update', {
                 method: 'POST',
