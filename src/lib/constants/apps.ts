@@ -43,7 +43,7 @@ export const ALL_APPLICATIONS = [
         id: "c751d858-bb8a-4bb2-bebf-317ff89034a0",
         app_code: "HCIS",
         app_name: "IHCMIS Portal",
-        launch_url: "http://localhost:3000",
+        launch_url: "http://localhost:3001",
         icon_name: "Users",
         description: "Akses mandiri administrasi human capital dan absensi karyawan digital.",
         category: "Human Capital",
