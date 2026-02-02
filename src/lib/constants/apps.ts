@@ -17,7 +17,7 @@ export const ALL_APPLICATIONS = [
     },
     {
         id: "bc26bd74-b0c5-4656-99c9-3b250c1bc806",
-        app_code: "HC_EXEC",
+        app_code: "HC_CMD", // Updated to match IAM
         app_name: "HC Executive Command Center",
         launch_url: getLaunchUrl("https://ecc.holding-perkebunan.com", "http://localhost:3007"),
         icon_name: "Activity",
@@ -27,7 +27,7 @@ export const ALL_APPLICATIONS = [
     },
     {
         id: "74fe6cf1-6ef4-440d-bcce-0c298958c022",
-        app_code: "STRAT",
+        app_code: "STRATEGIC", // Updated to match IAM
         app_name: "Strategic Dashboard",
         launch_url: getLaunchUrl("https://dashboard.holding-perkebunan.com", "http://localhost:3002"),
         icon_name: "BarChart3",
@@ -47,7 +47,7 @@ export const ALL_APPLICATIONS = [
     },
     {
         id: "c751d858-bb8a-4bb2-bebf-317ff89034a0",
-        app_code: "HCIS",
+        app_code: "IHCMIS", // Updated to match IAM
         app_name: "IHCMIS Portal",
         launch_url: getLaunchUrl("https://ihcmis.holding-perkebunan.com", "http://localhost:3001"),
         icon_name: "Users",
@@ -72,6 +72,16 @@ export const ALL_APPLICATIONS = [
         launch_url: getLaunchUrl("https://pps.holding-perkebunan.com", "http://localhost:3008"),
         icon_name: "Globe",
         description: "Pusat kendali layanan integrasi, notifikasi, dan workflow lintas aplikasi.",
+        category: "Infrastructure",
+        is_pwa: false
+    },
+    {
+        id: "d4e5f6g7-h8i9-0123-4567-890abcdef123", // Generated Placeholder ID
+        app_code: "HCDATAHUB",
+        app_name: "HC Data Control Tower",
+        launch_url: getLaunchUrl("https://hchub.holding-perkebunan.com", "http://localhost:3009"),
+        icon_name: "Database", // Assuming Database icon exists or defaults to Layers
+        description: "Centralized human capital data management and synchronization hub.",
         category: "Infrastructure",
         is_pwa: false
     }
