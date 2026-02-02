@@ -79,8 +79,8 @@ export const ALL_APPLICATIONS = [
         id: "d4e5f6g7-h8i9-0123-4567-890abcdef123", // Generated Placeholder ID
         app_code: "HCDATAHUB",
         app_name: "HC Data Control Tower",
-        launch_url: getLaunchUrl("https://hchub.holding-perkebunan.com", "http://localhost:3009"),
-        icon_name: "Database", // Assuming Database icon exists or defaults to Layers
+        launch_url: getLaunchUrl("https://dct.holding-perkebunan.com", "http://localhost:3005"),
+        icon_name: "Database",
         description: "Centralized human capital data management and synchronization hub.",
         category: "Infrastructure",
         is_pwa: false
