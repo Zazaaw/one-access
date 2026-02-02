@@ -53,5 +53,5 @@ export async function GET() {
         };
     });
 
-    return NextResponse.json(mergedCatalog);
+    return NextResponse.json(mergedCatalog.filter(app => app.app_code !== 'ONEACCESS'));
 }

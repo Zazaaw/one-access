@@ -65,5 +65,5 @@ export async function GET(request: Request) {
         };
     }).filter(app => app !== null);
 
-    return NextResponse.json(myApps);
+    return NextResponse.json(myApps.filter((app: any) => app.app_code !== 'ONEACCESS'));
 }
