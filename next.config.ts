@@ -1,3 +1,6 @@
+import type { NextConfig } from "next";
+
+// Force Rebuild Trigger: v1.0.2 to resolve deployment not found
 const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
@@ -5,10 +8,15 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development'
 });
 
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = {
   /* config options here */
-  turbopack: {}
+  reactStrictMode: true,
+  turbopack: {},
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
+  },
 };
 
 export default withPWA(nextConfig);
