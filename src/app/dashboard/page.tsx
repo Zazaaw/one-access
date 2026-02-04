@@ -224,7 +224,7 @@ export default function DashboardPage() {
                             <div className="w-14 h-14 bg-cyan-500/10 rounded-2xl flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-all">
                                 <HelpCircle className="w-7 h-7" />
                             </div>
-                            <h5 className="text-2xl font-black text-white uppercase tracking-tight">IT Support Center</h5>
+                            <h5 className="text-2xl font-black text-white uppercase tracking-tight">Support Center</h5>
                             <button className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em] flex items-center gap-2">Launch Ticket Center <ChevronRight className="w-3 h-3" /></button>
                         </div>
                         <div className="p-10 lg:p-12 rounded-[40px] border border-slate-800/50 bg-slate-900/10 space-y-6 hover:bg-slate-900/20 transition-all group">
