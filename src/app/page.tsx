@@ -170,7 +170,7 @@ export default function LandingPage() {
           {/* Support Info */}
           <div className="mt-8 text-center">
             <p className="text-slate-600 text-[10px] uppercase tracking-[0.2em] font-medium">
-              Powered by PTPN Nusantara IT Ecosystem
+              POWERED BY PT Perkebunan Nusantara III (Persero)
             </p>
           </div>
         </motion.div>
