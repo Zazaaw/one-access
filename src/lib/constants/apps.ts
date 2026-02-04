@@ -28,12 +28,12 @@ export const ALL_APPLICATIONS = [
     {
         id: "74fe6cf1-6ef4-440d-bcce-0c298958c022",
         app_code: "STRATEGIC", // Updated to match IAM
-        app_name: "Strategic Dashboard",
-        launch_url: getLaunchUrl("https://dashboard.holding-perkebunan.com", "http://localhost:3002"),
+        app_name: "Strategic Management Dashboard",
+        launch_url: getLaunchUrl("https://smd.ptpn.id", "http://localhost:3002"),
         icon_name: "BarChart3",
-        description: "Visualisasi KPI strategis dan monitoring target korporat PTPN Group.",
+        description: "Executive dashboard for strategic planning and BSC monitoring.",
         category: "Executive",
-        is_pwa: false
+        is_pwa: true
     },
     {
         id: "9aad054f-af61-41ca-bc61-44c29382a3fa",
