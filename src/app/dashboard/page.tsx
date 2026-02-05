@@ -197,6 +197,16 @@ export default function DashboardPage() {
                                                     <div className="w-16 h-16 bg-slate-800/50 border border-slate-700/50 rounded-3xl flex items-center justify-center group-hover:bg-emerald-500/10 group-hover:border-emerald-500/30 transition-all duration-500 shadow-xl">
                                                         <Icon className="w-8 h-8 text-slate-400 group-hover:text-emerald-400 group-hover:scale-110 transition-all duration-500" />
                                                     </div>
+                                                    {/* Notification Badge for Command Center */}
+                                                    {app.app_name.includes("Command Center") && (
+                                                        <motion.div
+                                                            initial={{ scale: 0 }}
+                                                            animate={{ scale: 1 }}
+                                                            className="px-3 py-1 bg-rose-500 text-white text-[10px] font-black rounded-full shadow-[0_0_20px_rgba(244,63,94,0.4)] border-2 border-[#020617]"
+                                                        >
+                                                            3 Pending
+                                                        </motion.div>
+                                                    )}
                                                 </div>
                                                 <div className="space-y-3">
                                                     <p className="text-[10px] font-black text-emerald-500/60 uppercase tracking-[0.2em]">{app.category}</p>
