@@ -39,7 +39,7 @@ export const ALL_APPLICATIONS = [
         id: "9aad054f-af61-41ca-bc61-44c29382a3fa",
         app_code: "HC_INIT",
         app_name: "HC Initiatives Tracker",
-        launch_url: getLaunchUrl("https://hctracker.holding-perkebunan.com", "http://localhost:3003"),
+        launch_url: getLaunchUrl("https://hctracker.ptpn.id", "http://localhost:3003"),
         icon_name: "Layers",
         description: "Pelacakan kemajuan inisiatif strategis dan manajemen program kerja multi-unit.",
         category: "Management",
