@@ -69,7 +69,7 @@ export const ALL_APPLICATIONS = [
         id: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
         app_code: "PLATFORM",
         app_name: "Platform Services Console",
-        launch_url: getLaunchUrl("https://pps.holding-perkebunan.com", "http://localhost:3008"),
+        launch_url: getLaunchUrl("https://pps.ptpn.id", "http://localhost:3008"),
         icon_name: "Globe",
         description: "Pusat kendali layanan integrasi, notifikasi, dan workflow lintas aplikasi.",
         category: "Infrastructure",
