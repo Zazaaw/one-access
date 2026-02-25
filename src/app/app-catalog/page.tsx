@@ -14,7 +14,7 @@ import {
     Lock,
     ArrowUpRight
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Application } from "@/lib/types/iam";
 import { useAuth } from "@/context/AuthContext";
 import { Sidebar } from "@/components/Sidebar";
@@ -29,7 +29,7 @@ const IconMap: Record<string, any> = {
     BookOpen
 };
 
-function AppCard({ app, index, isAuthorized, onRequestAccess }: { app: Application, index: number, isAuthorized: boolean, onRequestAccess: (app: Application) => void }) {
+function AppCard({ app, index, isAuthorized, onRequestAccess, onLaunch }: { app: Application, index: number, isAuthorized: boolean, onRequestAccess: (app: Application) => void, onLaunch: (app: Application) => void }) {
     const Icon = IconMap[app.icon_name] || Layers;
     return (
         <motion.div
@@ -59,7 +59,7 @@ function AppCard({ app, index, isAuthorized, onRequestAccess }: { app: Applicati
             <div className="mt-auto pt-8 w-full border-t border-slate-800/50">
                 {isAuthorized ? (
                     <button
-                        onClick={() => window.open(app.launch_url, '_blank')}
+                        onClick={() => onLaunch(app)}
                         className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20"
                     >
                         Launch Service <ArrowUpRight className="w-3 h-3" />
@@ -128,6 +128,26 @@ export default function AppCatalogPage() {
             return () => clearTimeout(timer);
         }
     }, [notification]);
+
+    // SSO-aware app launch handler (same as Dashboard)
+    const handleLaunchApp = useCallback(async (app: Application) => {
+        let finalUrl = app.launch_url;
+
+        try {
+            const supabase = await import('@/lib/supabase/client').then(m => m.createClient());
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (session?.access_token && session?.refresh_token) {
+                const separator = app.launch_url.includes('?') ? '&' : '?';
+                const tokens = `access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
+                finalUrl = `${app.launch_url}${separator}${tokens}`;
+            }
+        } catch (err) {
+            console.warn("Failed to attach SSO tokens:", err);
+        }
+
+        window.open(finalUrl, '_blank');
+    }, []);
 
     const handleRequestClick = (app: Application) => {
         setSelectedApp(app);
@@ -250,6 +270,7 @@ export default function AppCatalogPage() {
                                                             index={i}
                                                             isAuthorized={myAppIds.includes(app.id)}
                                                             onRequestAccess={handleRequestClick}
+                                                            onLaunch={handleLaunchApp}
                                                         />
                                                     ))}
                                                 </div>
@@ -266,6 +287,7 @@ export default function AppCatalogPage() {
                                             index={i}
                                             isAuthorized={myAppIds.includes(app.id)}
                                             onRequestAccess={handleRequestClick}
+                                            onLaunch={handleLaunchApp}
                                         />
                                     ))}
                                 </motion.div>
