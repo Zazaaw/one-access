@@ -84,5 +84,15 @@ export const ALL_APPLICATIONS = [
         description: "Centralized human capital data management and synchronization hub.",
         category: "Infrastructure",
         is_pwa: false
+    },
+    {
+        id: "a1a2a3a4-b1b2-c1c2-d1d2-e1e2e3e4e5e6",
+        app_code: "DPCS",
+        app_name: "Digital Performance Committee System",
+        launch_url: getLaunchUrl("https://dpcs.ptpn.id", "http://localhost:3009"),
+        icon_name: "Scale",
+        description: "Sistem governance penilaian kinerja eksekutif dan persidangan komite.",
+        category: "Executive",
+        is_pwa: false
     }
 ];

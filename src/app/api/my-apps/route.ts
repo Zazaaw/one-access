@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { ALL_APPLICATIONS } from '@/lib/constants/apps';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function GET(request: Request) {
     const supabase = await createClient();
+    const adminSupabase = await createAdminClient();
 
     // Get current authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -13,7 +15,7 @@ export async function GET(request: Request) {
     }
 
     // 1. Get the internal subject ID for the authenticated user
-    const { data: subject, error: subjectError } = await supabase
+    const { data: subject, error: subjectError } = await adminSupabase
         .from('subjects')
         .select('id')
         .eq('auth_id', user.id)
@@ -25,7 +27,7 @@ export async function GET(request: Request) {
     }
 
     // 2. Fetch real assignments from subject_app_roles AND application details from iam_applications
-    const { data: assignments, error: dbError } = await supabase
+    const { data: assignments, error: dbError } = await adminSupabase
         .from('subject_app_roles')
         .select(`
             app_id,
