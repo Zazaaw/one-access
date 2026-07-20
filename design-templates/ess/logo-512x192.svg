@@ -1,0 +1,19 @@
+<svg width="512" height="192" viewBox="0 0 512 192" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    TEMPLATE LOGO / WORDMARK - Employee Self Service
+    Ukuran: 512 x 192 px - untuk logo lockup di hero (aplikasi menampilkan
+    dengan tinggi ~80-96px, jadi 192px tinggi = tajam di retina).
+    PENTING: export sebagai PNG dengan LATAR TRANSPARAN (bukan JPG),
+    warna terang/putih karena ditaruh di atas artwork gelap.
+  -->
+
+  <!-- contoh mark + wordmark (GANTI dengan logo asli ESS) -->
+  <rect x="8" y="52" width="88" height="88" rx="20" fill="#0a84ff"/>
+  <path d="M40 84 h32 M40 96 h32 M40 108 h20" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
+
+  <text x="120" y="88" font-family="Archivo, Arial, sans-serif" font-size="38" font-weight="800" fill="#ffffff" letter-spacing="-1">Employee</text>
+  <text x="120" y="132" font-family="Archivo, Arial, sans-serif" font-size="38" font-weight="800" fill="#ffffff" letter-spacing="-1">Self Service</text>
+
+  <!-- === GUIDE (hapus sebelum export) === -->
+  <rect x="4" y="4" width="504" height="184" rx="8" fill="none" stroke="#ffffff" stroke-opacity="0.2" stroke-dasharray="6 8"/>
+</svg>

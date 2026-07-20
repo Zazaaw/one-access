@@ -1,0 +1,35 @@
+<svg width="2400" height="1200" viewBox="0 0 2400 1200" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    TEMPLATE ARTWORK / HERO - Employee Self Service
+    Ukuran: 2400 x 1200 px (rasio 2:1 landscape) - INI UKURAN PAS untuk backdrop
+    halaman detail (hero full-bleed). Aplikasi menaruh scrim gelap di kiri & bawah
+    (untuk teks putih), jadi biarkan sisi KIRI relatif kosong/tenang, dan taruh
+    subjek/foto utama di KANAN-tengah.
+    Export akhir: JPG/PNG 2400x1200 (kualitas tinggi, ~<500KB kalau bisa).
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a2a52"/>
+      <stop offset="0.5" stop-color="#0a84ff"/>
+      <stop offset="1" stop-color="#64d2ff"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.72" cy="0.15" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- GANTI dengan foto/ilustrasi ESS (subjek di kanan) -->
+  <rect width="2400" height="1200" fill="url(#bg)"/>
+  <rect width="2400" height="1200" fill="url(#glow)"/>
+
+  <!-- === GUIDE (hapus sebelum export) === -->
+  <!-- zona teks aplikasi (kiri-bawah): jaga area ini tetap tenang -->
+  <g fill="none">
+    <rect x="120" y="120" width="2160" height="960" rx="10" stroke="#ffffff" stroke-opacity="0.25" stroke-dasharray="8 10"/>
+    <rect x="120" y="720" width="1000" height="360" rx="10" fill="#000000" fill-opacity="0.18" stroke="#ffffff" stroke-opacity="0.35" stroke-dasharray="8 10"/>
+  </g>
+  <text x="150" y="770" font-family="Arial" font-size="30" fill="#ffffff" fill-opacity="0.75">Zona teks aplikasi (judul + tombol muncul di sini)</text>
+  <text x="150" y="812" font-family="Arial" font-size="30" fill="#ffffff" fill-opacity="0.75">-> biarkan area kiri-bawah tenang, subjek utama taruh di kanan</text>
+  <text x="1700" y="170" font-family="Arial" font-size="28" fill="#ffffff" fill-opacity="0.6">Subjek / foto utama di sisi kanan</text>
+</svg>
