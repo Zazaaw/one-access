@@ -35,7 +35,16 @@ export async function GET(request: Request) {
                 id,
                 app_name,
                 app_description,
-                app_code
+                app_code,
+                app_category,
+                poster_url,
+                artwork_url,
+                artwork_video_url,
+                logo_url,
+                creator_name,
+                publisher_name,
+                app_version,
+                app_detail
             )
         `)
         .eq('subject_id', subject.id)
@@ -63,7 +72,17 @@ export async function GET(request: Request) {
             // Override with DB values to be the "Single Source of Truth"
             app_name: dbApp.app_name,
             description: dbApp.app_description,
-            id: dbApp.id // Ensure ID matches DB
+            id: dbApp.id, // Ensure ID matches DB
+            // Presentation fields set via /kelola
+            category: dbApp.app_category || 'Enterprise',
+            poster_url: dbApp.poster_url || undefined,
+            artwork_url: dbApp.artwork_url || undefined,
+            artwork_video_url: dbApp.artwork_video_url || undefined,
+            logo_url: dbApp.logo_url || undefined,
+            creator: dbApp.creator_name || undefined,
+            publisher: dbApp.publisher_name || undefined,
+            version: dbApp.app_version || undefined,
+            detail: dbApp.app_detail || undefined,
         };
     }).filter(app => app !== null);
 

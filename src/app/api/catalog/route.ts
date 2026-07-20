@@ -8,7 +8,7 @@ export async function GET() {
     // Fetch all active applications from IAM DB
     const { data: dbApps, error } = await supabase
         .from('iam_applications')
-        .select('id, app_code, app_name, app_description, app_type')
+        .select('id, app_code, app_name, app_description, app_type, app_category, poster_url, artwork_url, artwork_video_url, logo_url, creator_name, publisher_name, app_version, app_detail')
         .eq('is_active', true)
         .order('app_name');
 
@@ -30,13 +30,27 @@ export async function GET() {
             (app.app_code === 'HCIS' && dbApp.app_code === 'IHCMIS') // Handle known mismatch
         );
 
+        // Presentation fields (category/poster/artwork/logo/creator) come from DB, set via /kelola
+        const presentation = {
+            category: dbApp.app_category || 'Enterprise',
+            poster_url: dbApp.poster_url || undefined,
+            artwork_url: dbApp.artwork_url || undefined,
+            artwork_video_url: dbApp.artwork_video_url || undefined,
+            logo_url: dbApp.logo_url || undefined,
+            creator: dbApp.creator_name || undefined,
+            publisher: dbApp.publisher_name || undefined,
+            version: dbApp.app_version || undefined,
+            detail: dbApp.app_detail || undefined,
+        };
+
         if (uiConfig) {
             return {
                 ...uiConfig,
                 id: dbApp.id, // Ensure we use the real DB ID
                 app_name: dbApp.app_name, // Use DB Name
                 description: dbApp.app_description, // Use DB Description
-                app_code: dbApp.app_code // Use DB Code
+                app_code: dbApp.app_code, // Use DB Code
+                ...presentation,
             };
         }
 
@@ -48,8 +62,8 @@ export async function GET() {
             launch_url: '#', // No launch URL known
             icon_name: 'Layers', // Default icon
             description: dbApp.app_description,
-            category: 'Uncategorized',
-            is_pwa: false
+            is_pwa: false,
+            ...presentation,
         };
     });
 
