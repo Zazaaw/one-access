@@ -11,27 +11,24 @@ import {
     CheckCircle2,
     X,
     Loader2,
-    Lock,
-    User,
-    Camera
+    Camera,
+    Wand2
 } from "lucide-react";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { Sidebar } from "@/components/Sidebar";
-import { Header } from "@/components/Header";
+import { Shell } from "@/components/Shell";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { updateProfileAction } from "@/lib/actions/auth";
+import { categoryGradient } from "@/lib/constants/appVisuals";
 
 export default function SettingsPage() {
     const { user } = useAuth();
-    const [searchQuery, setSearchQuery] = useState("");
 
-    // Modal States
     const [activeModal, setActiveModal] = useState<'password' | 'mfa' | 'profile' | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
 
-    // Form States
     const [passwordForm, setPasswordForm] = useState({ current: "", new: "", confirm: "" });
     const [mfaEnrollData, setMfaEnrollData] = useState<{ id: string, qr: string, secret: string } | null>(null);
     const [mfaCode, setMfaCode] = useState("");
@@ -41,12 +38,11 @@ export default function SettingsPage() {
 
     const [securityStatus, setSecurityStatus] = useState({
         mfaActive: false,
-        emailVerified: false,
-        passwordStrength: 'Strong' // Mocked but we can keep it for UI
+        emailVerified: false
     });
 
     const [sessions, setSessions] = useState([
-        { device: "Current Device", location: "Detecting...", ip: "...", time: "Current Session", active: true },
+        { device: "Perangkat ini", location: "Mendeteksi...", ip: "...", time: "Sesi aktif", active: true },
     ]);
 
     const supabase = createClient();
@@ -58,37 +54,28 @@ export default function SettingsPage() {
         if (activeModal === 'profile' && user) {
             setProfileForm({ display_name: user.display_name });
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeModal, user]);
 
     useEffect(() => {
         const fetchSecurityInfo = async () => {
             const { data: { user: authUser } } = await supabase.auth.getUser();
             if (authUser) {
-                // 1. Check MFA
                 const { data: factors } = await supabase.auth.mfa.listFactors();
                 const isMfaActive = factors?.all?.some(f => f.status === 'verified') || false;
-
-                // 2. Check Email Verification
                 const isEmailVerified = !!authUser.email_confirmed_at;
 
-                setSecurityStatus(prev => ({
-                    ...prev,
-                    mfaActive: isMfaActive,
-                    emailVerified: isEmailVerified
-                }));
+                setSecurityStatus({ mfaActive: isMfaActive, emailVerified: isEmailVerified });
 
-                // 3. Current Session Basic Info (Simplified)
                 try {
                     const ipRes = await fetch('https://api.ipify.org?format=json');
                     const ipData = await ipRes.json();
-
-                    // Note: In real app we would fetch location from ip-api or similar
                     setSessions([
                         {
                             device: navigator.userAgent.split(') ')[0].split(' (')[1] || "Mac/PC",
-                            location: "Browsing from ID",
+                            location: "Jaringan Indonesia",
                             ip: ipData.ip,
-                            time: "Current Session",
+                            time: "Sesi aktif",
                             active: true
                         }
                     ]);
@@ -96,7 +83,6 @@ export default function SettingsPage() {
                     console.error("Failed to fetch IP", e);
                 }
 
-                // 4. Fetch Login History from hr_audit_logs
                 try {
                     const { data: subject } = await supabase
                         .from('subjects')
@@ -115,13 +101,12 @@ export default function SettingsPage() {
 
                         if (logs && logs.length > 0) {
                             const historicalSessions = logs.map(log => ({
-                                device: log.metadata?.device || "Inisiatif Gateway",
+                                device: log.metadata?.device || "Gateway",
                                 location: log.metadata?.location || "PTPN Network",
                                 ip: log.metadata?.ip || "Unknown",
                                 time: new Date(log.created_at).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }),
                                 active: false
                             }));
-
                             setSessions(prev => [prev[0], ...historicalSessions]);
                         }
                     }
@@ -132,6 +117,7 @@ export default function SettingsPage() {
         };
 
         fetchSecurityInfo();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const [language, setLanguage] = useState<'id' | 'en'>('id');
@@ -203,20 +189,16 @@ export default function SettingsPage() {
             if (action === 'mfa') {
                 if (!mfaEnrollData) throw new Error("MFA enrollment data missing");
 
-                // 1. Create a challenge
                 const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
                     factorId: mfaEnrollData.id
                 });
-
                 if (challengeError) throw challengeError;
 
-                // 2. Verify the challenge
                 const { error: verifyError } = await supabase.auth.mfa.verify({
                     factorId: mfaEnrollData.id,
                     challengeId: challengeData.id,
                     code: mfaCode
                 });
-
                 if (verifyError) throw verifyError;
 
                 setNotification({ message: "Multi-Factor Authentication telah diaktifkan!", type: 'success' });
@@ -233,12 +215,10 @@ export default function SettingsPage() {
                 }
 
                 const result = await updateProfileAction(formData);
-
                 if (!result.success) throw new Error(result.message);
 
                 setNotification({ message: "Profil berhasil diperbarui!", type: 'success' });
                 setActiveModal(null);
-                // Force AuthContext to refresh data
                 setTimeout(() => window.location.reload(), 1500);
                 return;
             }
@@ -279,387 +259,328 @@ export default function SettingsPage() {
         }
     };
 
+    const inputClass = "w-full rounded-xl border border-line bg-elevated px-4 py-3 text-[15px] text-ink placeholder:text-ink-3 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all";
+    const modalTitle = activeModal === 'password' ? 'Ganti Password' : activeModal === 'profile' ? 'Edit Profil' : 'Multi-Factor Authentication';
+
+    const SettingsRow = ({ icon: Icon, title, subtitle, onClick }: { icon: typeof Key, title: string, subtitle: string, onClick: () => void }) => (
+        <button onClick={onClick} className="w-full flex items-center gap-3.5 px-5 py-4 hover:bg-elevated transition-colors group text-left">
+            <div className="w-9 h-9 rounded-[10px] bg-elevated text-accent flex items-center justify-center shrink-0">
+                <Icon className="w-5 h-5" strokeWidth={1.75} />
+            </div>
+            <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-medium">{title}</p>
+                <p className="text-[13px] text-ink-2 truncate">{subtitle}</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-ink-3 group-hover:text-ink-2 group-hover:translate-x-0.5 transition-all shrink-0" strokeWidth={2} />
+        </button>
+    );
+
     return (
-        <div className="min-h-screen bg-[#020617] text-slate-50 flex font-sans relative">
-            <Sidebar />
-
-            <div className="flex-1 ml-20 lg:ml-72 min-h-screen flex flex-col">
-                <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-
-                {/* Global Notification Toast */}
-                <AnimatePresence>
-                    {notification && (
-                        <motion.div
-                            initial={{ opacity: 0, y: -20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            className="fixed top-24 right-8 z-50 bg-emerald-500 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 font-bold text-sm"
-                        >
-                            <CheckCircle2 className="w-5 h-5" />
-                            {notification.message}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                <main className="flex-1 p-8 lg:p-12 space-y-12 max-w-6xl">
-                    {/* Header */}
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20 text-[10px] font-black text-emerald-500 uppercase tracking-widest">
-                            Account Security
-                        </div>
-                        <h2 className="text-4xl lg:text-5xl font-black text-white tracking-tighter">Settings & <span className="premium-gradient-text text-emerald-400">Privacy.</span></h2>
-                        <p className="text-slate-500 font-medium max-w-2xl">
-                            Kelola keamanan akun, preferensi notifikasi, dan tinjau aktivitas sesi login Anda untuk perlindungan maksimal.
-                        </p>
+        <Shell>
+            {/* Notification toast */}
+            <AnimatePresence>
+                {notification && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -12 }}
+                        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                        className="fixed top-16 right-6 z-[90] flex items-center gap-2.5 rounded-2xl bg-panel border border-line shadow-billboard px-4 py-3 max-w-sm"
+                    >
+                        {notification.type === 'success' ? (
+                            <CheckCircle2 className="w-5 h-5 shrink-0 text-good" strokeWidth={2} />
+                        ) : (
+                            <X className="w-5 h-5 shrink-0 text-danger" strokeWidth={2} />
+                        )}
+                        <p className="text-[13px] text-ink leading-snug">{notification.message}</p>
                     </motion.div>
+                )}
+            </AnimatePresence>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Cinematic profile hero (matches Hak Akses) */}
+            <section className="relative w-full overflow-hidden">
+                <div className="absolute inset-0" style={{ background: categoryGradient('Infrastructure') }} />
+                <div className="absolute inset-0 bg-gradient-to-t from-stage via-stage/70 to-stage/40" />
+                <div className="absolute inset-0 bg-gradient-to-r from-stage/80 via-transparent to-transparent" />
 
-                        {/* Left Column: Profile Card */}
-                        <div className="space-y-8">
-                            <div className="glass-card p-8 flex flex-col items-center text-center gap-4 bg-gradient-to-b from-slate-900 via-slate-900 to-emerald-950/20">
-                                <div className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-teal-400 rounded-full flex items-center justify-center text-white text-3xl font-black shadow-2xl shadow-emerald-500/30 overflow-hidden">
-                                    {user?.avatar_url ? (
-                                        <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-                                    ) : (
-                                        user?.display_name?.split(' ').map(n => n[0]).slice(0, 2).join('') || 'U'
-                                    )}
+                <div className="relative mx-auto max-w-5xl px-6 lg:px-8 pt-24 lg:pt-28 pb-10">
+                    <motion.div
+                        initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                    >
+                        <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/70 mb-4">Akun & Keamanan</p>
+                        <div className="flex items-center gap-5">
+                            <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-2xl bg-white/10 backdrop-blur-md text-white flex items-center justify-center text-2xl lg:text-3xl font-display font-extrabold overflow-hidden shrink-0 ring-1 ring-white/20">
+                                {user?.avatar_url ? (
+                                    <img src={user.avatar_url} alt={user?.display_name || "Profil"} className="w-full h-full object-cover" />
+                                ) : (
+                                    user?.display_name?.split(' ').map(n => n[0]).slice(0, 2).join('') || 'U'
+                                )}
+                            </div>
+                            <div>
+                                <h1 className="font-display text-4xl lg:text-6xl font-extrabold tracking-tight leading-[1.02] text-white">{user?.display_name}</h1>
+                                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-2.5 text-[13px] text-white/75">
+                                    <span className="capitalize">{user?.subject_type}</span>
+                                    <span className="w-1 h-1 rounded-full bg-white/40" aria-hidden="true" />
+                                    <span className="font-mono tnum">NIK {user?.nik_sap}</span>
+                                    <span className="w-1 h-1 rounded-full bg-white/40" aria-hidden="true" />
+                                    <button onClick={() => setActiveModal('profile')} className="font-medium text-white hover:text-white/80 transition-colors underline underline-offset-2 decoration-white/30">Edit profil</button>
                                 </div>
-                                <div>
-                                    <h3 className="text-xl font-black text-white">{user?.display_name}</h3>
-                                    <p className="text-sm font-medium text-emerald-500 mt-1">{user?.subject_type} / NIK: {user?.nik_sap}</p>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            </section>
+
+            <div className="mx-auto max-w-5xl px-6 lg:px-8 pt-4 pb-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                {/* Left column */}
+                <div className="space-y-6">
+                    <section className="space-y-2">
+                        <h4 className="text-[13px] font-semibold text-ink-3 uppercase tracking-wide pl-1">Akses Akun</h4>
+                        <div className="rounded-2xl bg-panel border border-line shadow-poster divide-y divide-line overflow-hidden">
+                            <SettingsRow
+                                icon={Key}
+                                title="Ganti Password"
+                                subtitle="Berlaku untuk seluruh aplikasi PTPN Group (SSO)."
+                                onClick={() => setActiveModal('password')}
+                            />
+                            <SettingsRow
+                                icon={Smartphone}
+                                title="Multi-Factor Authentication"
+                                subtitle={securityStatus.mfaActive ? 'Aktif melalui aplikasi authenticator.' : 'Tambahkan lapisan keamanan ekstra.'}
+                                onClick={() => setActiveModal('mfa')}
+                            />
+                        </div>
+                    </section>
+
+                    <section className="space-y-2">
+                        <h4 className="text-[13px] font-semibold text-ink-3 uppercase tracking-wide pl-1">Aktivitas Login</h4>
+                        <div className="rounded-2xl bg-panel border border-line shadow-poster p-5 divide-y divide-line">
+                            {sessions.map((session, i) => (
+                                <div key={i} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <span className={`w-2 h-2 rounded-full shrink-0 ${session.active ? 'bg-good' : 'bg-line'}`} aria-hidden="true" />
+                                        <div className="min-w-0">
+                                            <p className="text-[14px] font-medium truncate">{session.device}</p>
+                                            <p className="text-[12px] text-ink-3 truncate">{session.location} <span className="font-mono">({session.ip})</span></p>
+                                        </div>
+                                    </div>
+                                    <p className="text-[12px] text-ink-2 shrink-0">{session.time}</p>
                                 </div>
-                                <button onClick={() => setActiveModal('profile')} className="text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-colors w-full">
-                                    Edit Public Profile
+                            ))}
+                            <div className="pt-3">
+                                <button
+                                    onClick={handleGlobalLogout}
+                                    disabled={isLoading}
+                                    className="text-[13px] font-semibold text-danger hover:opacity-70 transition-opacity disabled:opacity-50"
+                                >
+                                    {isLoading ? 'Memproses...' : 'Keluar dari semua perangkat lain'}
                                 </button>
                             </div>
+                        </div>
+                    </section>
+                </div>
 
-                            <div className="glass-card p-6 space-y-4">
-                                <div className="flex items-center gap-3 text-white font-bold pb-4 border-b border-slate-800">
-                                    <Shield className="w-5 h-5 text-emerald-500" /> Security Status
+                {/* Right column */}
+                <div className="space-y-6">
+                    <section className="space-y-2">
+                        <h4 className="text-[13px] font-semibold text-ink-3 uppercase tracking-wide pl-1">Status Keamanan</h4>
+                        <div className="rounded-2xl bg-panel border border-line shadow-poster p-5 space-y-3">
+                            <div className="flex items-center justify-between text-[14px]">
+                                <span className="flex items-center gap-2.5 text-ink-2"><Shield className="w-4.5 h-4.5 text-ink-3" strokeWidth={2} /> Multi-Factor Auth</span>
+                                <span className={`font-semibold ${securityStatus.mfaActive ? 'text-good' : 'text-ink-3'}`}>{securityStatus.mfaActive ? 'Aktif' : 'Nonaktif'}</span>
+                            </div>
+                            <div className="h-px bg-line" />
+                            <div className="flex items-center justify-between text-[14px]">
+                                <span className="flex items-center gap-2.5 text-ink-2"><CheckCircle2 className="w-4.5 h-4.5 text-ink-3" strokeWidth={2} /> Email pemulihan</span>
+                                <span className={`font-semibold ${securityStatus.emailVerified ? 'text-good' : 'text-ink-3'}`}>{securityStatus.emailVerified ? 'Terverifikasi' : 'Belum'}</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="space-y-2">
+                        <h4 className="text-[13px] font-semibold text-ink-3 uppercase tracking-wide pl-1">Preferensi</h4>
+                        <div className="rounded-2xl bg-panel border border-line shadow-poster p-5">
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-2.5">
+                                    <Globe className="w-4.5 h-4.5 text-ink-3" strokeWidth={2} />
+                                    <span className="text-[14px] font-medium">Bahasa</span>
                                 </div>
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-slate-400">Password Strength</span>
-                                    <span className="text-emerald-400 font-bold">{securityStatus.passwordStrength}</span>
-                                </div>
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-slate-400">MFA Status</span>
-                                    <span className={securityStatus.mfaActive ? "text-emerald-400 font-bold" : "text-slate-500 font-bold"}>
-                                        {securityStatus.mfaActive ? 'Active' : 'Inactive'}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-slate-400">Recovery Email</span>
-                                    <span className={securityStatus.emailVerified ? "text-emerald-400 font-bold" : "text-slate-500 font-bold"}>
-                                        {securityStatus.emailVerified ? 'Verified' : 'Unverified'}
-                                    </span>
+                                <div className="inline-flex items-center rounded-lg bg-line p-0.5">
+                                    <button
+                                        onClick={() => handleLanguageChange('id')}
+                                        className={`rounded-md px-3 py-1 text-[13px] font-medium transition-all ${language === 'id' ? 'bg-panel text-ink shadow-sm' : 'text-ink-2'}`}
+                                    >
+                                        Indonesia
+                                    </button>
+                                    <button
+                                        onClick={() => handleLanguageChange('en')}
+                                        className={`rounded-md px-3 py-1 text-[13px] font-medium transition-all ${language === 'en' ? 'bg-panel text-ink shadow-sm' : 'text-ink-2'}`}
+                                    >
+                                        English
+                                    </button>
                                 </div>
                             </div>
                         </div>
+                    </section>
 
-                        {/* Right Column: Settings Controls */}
-                        <div className="lg:col-span-2 space-y-8">
-
-                            {/* Account Access Section */}
-                            <section className="space-y-4">
-                                <h4 className="text-lg font-black text-white uppercase tracking-tight flex items-center gap-2">
-                                    <Key className="w-5 h-5 text-slate-500" /> Account Access
-                                </h4>
-
-                                <div className="glass-card divide-y divide-slate-800/50 overflow-hidden">
-                                    <button onClick={() => setActiveModal('password')} className="w-full flex items-center justify-between p-6 hover:bg-slate-800/30 transition-colors group">
-                                        <div className="flex items-start gap-4 text-left">
-                                            <div className="p-3 bg-slate-800 rounded-xl group-hover:bg-emerald-500/20 text-slate-400 group-hover:text-emerald-400 transition-colors">
-                                                <Key className="w-5 h-5" />
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-white group-hover:text-emerald-400 transition-colors">Change Password</p>
-                                                <p className="text-xs text-slate-500 mt-1">
-                                                    Terakhir diperbarui {user && new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-emerald-400 transition-colors" />
-                                    </button>
-
-                                    <button onClick={() => setActiveModal('mfa')} className="w-full flex items-center justify-between p-6 hover:bg-slate-800/30 transition-colors group">
-                                        <div className="flex items-start gap-4 text-left">
-                                            <div className="p-3 bg-slate-800 rounded-xl group-hover:bg-emerald-500/20 text-slate-400 group-hover:text-emerald-400 transition-colors">
-                                                <Smartphone className="w-5 h-5" />
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-white group-hover:text-emerald-400 transition-colors">Multi-Factor Authentication</p>
-                                                <p className={`text-xs mt-1 flex items-center gap-1 ${securityStatus.mfaActive ? 'text-emerald-500' : 'text-slate-500'}`}>
-                                                    {securityStatus.mfaActive ? (
-                                                        <><CheckCircle2 className="w-3 h-3" /> Enabled via Authenticator App</>
-                                                    ) : (
-                                                        <>Security enhancement available</>
-                                                    )}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-emerald-400 transition-colors" />
-                                    </button>
-                                </div>
-                            </section>
-
-                            {/* Session History */}
-                            <section className="space-y-4">
-                                <h4 className="text-lg font-black text-white uppercase tracking-tight flex items-center gap-2">
-                                    <History className="w-5 h-5 text-slate-500" /> Login Activity
-                                </h4>
-                                <div className="glass-card p-6 space-y-4">
-                                    {sessions.map((session, i) => (
-                                        <div key={i} className="flex items-center justify-between">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-2 h-2 rounded-full ${session.active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-700'}`} />
-                                                <div>
-                                                    <p className="text-sm font-bold text-white uppercase">{session.device}</p>
-                                                    <p className="text-xs text-slate-500">{session.location} • {session.ip}</p>
-                                                </div>
-                                            </div>
-                                            <p className="text-xs font-medium text-slate-400 capitalize">{session.time}</p>
-                                        </div>
-                                    ))}
-                                    {user && (
-                                        <div className="flex items-center justify-between opacity-50">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-2 h-2 rounded-full bg-slate-700" />
-                                                <div>
-                                                    <p className="text-sm font-bold text-white">Previous Session</p>
-                                                    <p className="text-xs text-slate-500">Last seen from secure gateway</p>
-                                                </div>
-                                            </div>
-                                            <p className="text-xs font-medium text-slate-400">Authenticated</p>
-                                        </div>
-                                    )}
-                                    <button
-                                        onClick={handleGlobalLogout}
-                                        disabled={isLoading}
-                                        className="w-full mt-4 text-xs font-bold text-rose-500 hover:text-rose-400 uppercase tracking-widest pt-4 border-t border-slate-800 transition-colors disabled:opacity-50"
-                                    >
-                                        {isLoading ? 'Processing...' : 'Sign out of all other devices'}
-                                    </button>
-                                </div>
-                            </section>
-
-                            {/* Preferences */}
-                            <section className="space-y-4">
-                                <h4 className="text-lg font-black text-white uppercase tracking-tight flex items-center gap-2">
-                                    <Globe className="w-5 h-5 text-slate-500" /> Preferences
-                                </h4>
-                                <div className="glass-card p-1">
-                                    <div className="grid grid-cols-2 gap-1 p-1 bg-slate-900/50 rounded-xl">
-                                        <button
-                                            onClick={() => handleLanguageChange('id')}
-                                            className={`py-2 text-xs font-bold rounded-lg transition-all ${language === 'id' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
-                                        >
-                                            Bahasa Indonesia
-                                        </button>
-                                        <button
-                                            onClick={() => handleLanguageChange('en')}
-                                            className={`py-2 text-xs font-bold rounded-lg transition-all ${language === 'en' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
-                                        >
-                                            English (US)
-                                        </button>
-                                    </div>
-                                </div>
-                            </section>
-                        </div>
-                    </div>
-                </main>
+                    <section className="space-y-2">
+                        <h4 className="text-[13px] font-semibold text-ink-3 uppercase tracking-wide pl-1">Studio Aplikasi</h4>
+                        <Link href="/kelola" className="press flex items-center gap-3.5 rounded-2xl bg-panel border border-line shadow-poster p-5 hover:border-white/20 transition-colors group">
+                            <div className="w-9 h-9 rounded-[10px] bg-elevated text-accent flex items-center justify-center shrink-0">
+                                <Wand2 className="w-5 h-5" strokeWidth={1.75} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[15px] font-medium">Kelola Aplikasi</p>
+                                <p className="text-[13px] text-ink-2">Atur poster, artwork, dan deskripsi aplikasi yang Anda kelola.</p>
+                            </div>
+                            <ChevronRight className="w-5 h-5 text-ink-3 group-hover:text-ink-2 group-hover:translate-x-0.5 transition-all shrink-0" strokeWidth={2} />
+                        </Link>
+                    </section>
+                </div>
+            </div>
             </div>
 
             {/* MODALS */}
             <AnimatePresence>
                 {activeModal && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setActiveModal(null)}
-                            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+                            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
                         />
 
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="relative w-full max-w-md bg-[#0f172a] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden"
+                            initial={{ opacity: 0, y: 40, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 20, scale: 0.98 }}
+                            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                            className="relative w-full sm:max-w-md rounded-t-[22px] sm:rounded-2xl bg-panel border border-line shadow-billboard overflow-hidden"
                         >
-                            <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
-                                <h3 className="text-xl font-black text-white">
-                                    {activeModal === 'password' ? 'Change Password' : activeModal === 'profile' ? 'Edit Public Profile' : 'MFA Settings'}
-                                </h3>
-                                <button onClick={() => setActiveModal(null)} className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
-                                    <X className="w-5 h-5" />
+                            <div className="px-6 py-4 border-b border-line flex justify-between items-center">
+                                <h3 className="font-display text-[17px] font-bold tracking-tight">{modalTitle}</h3>
+                                <button
+                                    onClick={() => setActiveModal(null)}
+                                    aria-label="Tutup"
+                                    className="p-1.5 rounded-full text-ink-3 hover:text-ink hover:bg-line transition-colors"
+                                >
+                                    <X className="w-5 h-5" strokeWidth={2} />
                                 </button>
                             </div>
 
-                            <div className="p-6 space-y-5">
+                            <div className="p-6 space-y-5 max-h-[75dvh] overflow-y-auto">
                                 {activeModal === 'password' ? (
                                     <>
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Current Password</label>
-                                                <input
-                                                    type="password"
-                                                    value={passwordForm.current}
-                                                    onChange={e => setPasswordForm({ ...passwordForm, current: e.target.value })}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
-                                                />
+                                        <div className="space-y-3.5">
+                                            <div className="space-y-1.5">
+                                                <label htmlFor="current-password" className="block text-[13px] font-medium text-ink-2 pl-1">Password saat ini</label>
+                                                <input id="current-password" type="password" value={passwordForm.current} onChange={e => setPasswordForm({ ...passwordForm, current: e.target.value })} className={inputClass} />
                                             </div>
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">New Password</label>
-                                                <input
-                                                    type="password"
-                                                    value={passwordForm.new}
-                                                    onChange={e => setPasswordForm({ ...passwordForm, new: e.target.value })}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
-                                                />
+                                            <div className="space-y-1.5">
+                                                <label htmlFor="new-password" className="block text-[13px] font-medium text-ink-2 pl-1">Password baru</label>
+                                                <input id="new-password" type="password" value={passwordForm.new} onChange={e => setPasswordForm({ ...passwordForm, new: e.target.value })} className={inputClass} />
                                             </div>
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Confirm New Password</label>
-                                                <input
-                                                    type="password"
-                                                    value={passwordForm.confirm}
-                                                    onChange={e => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
-                                                />
+                                            <div className="space-y-1.5">
+                                                <label htmlFor="confirm-password" className="block text-[13px] font-medium text-ink-2 pl-1">Konfirmasi password baru</label>
+                                                <input id="confirm-password" type="password" value={passwordForm.confirm} onChange={e => setPasswordForm({ ...passwordForm, confirm: e.target.value })} className={inputClass} />
                                             </div>
                                         </div>
-                                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex gap-3 items-start">
-                                            <Lock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                                            <p className="text-xs text-amber-500/80 leading-relaxed">Password baru akan berlaku untuk seluruh aplikasi PTPN Group (Integrated SSO). Sesi aktif di perangkat lain akan diakhiri.</p>
-                                        </div>
+                                        <p className="text-[12px] text-ink-3 leading-relaxed px-1">
+                                            Password baru berlaku untuk seluruh aplikasi PTPN Group (SSO). Sesi di perangkat lain akan diakhiri.
+                                        </p>
                                     </>
                                 ) : activeModal === 'profile' ? (
-                                    <div className="space-y-6">
-                                        <div className="text-center space-y-4">
-                                            <div className="relative inline-block group/avatar cursor-pointer">
-                                                <input
-                                                    type="file"
-                                                    id="avatar-upload"
-                                                    className="hidden"
-                                                    accept="image/*"
-                                                    onChange={handleFileChange}
-                                                />
+                                    <div className="space-y-5">
+                                        <div className="text-center space-y-2.5">
+                                            <div className="relative inline-block group/avatar">
+                                                <input type="file" id="avatar-upload" className="hidden" accept="image/*" onChange={handleFileChange} />
                                                 <label htmlFor="avatar-upload" className="cursor-pointer block">
-                                                    <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-400 rounded-full flex items-center justify-center text-white text-2xl font-black shadow-lg overflow-hidden relative">
+                                                    <div className="w-20 h-20 rounded-full bg-elevated text-ink flex items-center justify-center text-2xl font-display font-extrabold overflow-hidden relative ring-1 ring-white/10">
                                                         {avatarPreview ? (
-                                                            <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
+                                                            <img src={avatarPreview} alt="Pratinjau" className="w-full h-full object-cover" />
                                                         ) : user?.avatar_url ? (
-                                                            <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                                                            <img src={user.avatar_url} alt="Profil" className="w-full h-full object-cover" />
                                                         ) : (
                                                             profileForm.display_name?.split(' ').map(n => n[0]).slice(0, 2).join('') || 'U'
                                                         )}
                                                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">
-                                                            <Camera className="w-6 h-6 text-white" />
+                                                            <Camera className="w-6 h-6 text-white" strokeWidth={1.75} />
                                                         </div>
                                                     </div>
                                                 </label>
-                                                <div className="absolute -bottom-1 -right-1 p-1.5 bg-slate-900 border border-slate-800 rounded-lg text-emerald-400">
-                                                    <User className="w-3.5 h-3.5" />
-                                                </div>
                                             </div>
-                                            <div>
-                                                <h4 className="text-sm font-bold text-white">Public Display Identity</h4>
-                                                <p className="text-xs text-slate-500">Klik pada foto untuk mengunggah foto profil baru.</p>
-                                            </div>
+                                            <p className="text-[12px] text-ink-3">Klik foto untuk mengganti.</p>
                                         </div>
 
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Display Name</label>
-                                                <input
-                                                    type="text"
-                                                    value={profileForm.display_name}
-                                                    onChange={e => setProfileForm({ ...profileForm, display_name: e.target.value })}
-                                                    placeholder="Masukkan nama lengkap Anda"
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
-                                                />
+                                        <div className="space-y-3.5">
+                                            <div className="space-y-1.5">
+                                                <label htmlFor="display-name" className="block text-[13px] font-medium text-ink-2 pl-1">Nama tampilan</label>
+                                                <input id="display-name" type="text" value={profileForm.display_name} onChange={e => setProfileForm({ ...profileForm, display_name: e.target.value })} placeholder="Masukkan nama lengkap Anda" className={inputClass} />
                                             </div>
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Corporate Identity (NIK)</label>
-                                                <input
-                                                    type="text"
-                                                    value={user?.nik_sap}
-                                                    disabled
-                                                    className="w-full bg-slate-900/50 border border-slate-800/50 rounded-xl px-4 py-3 text-slate-500 cursor-not-allowed opacity-70"
-                                                />
-                                                <p className="text-[10px] text-slate-600 italic">NIK terikat secara permanen dengan akun korporat Anda.</p>
+                                            <div className="space-y-1.5">
+                                                <label htmlFor="nik-field" className="block text-[13px] font-medium text-ink-2 pl-1">NIK korporat</label>
+                                                <input id="nik-field" type="text" value={user?.nik_sap} disabled className="w-full rounded-xl border border-line bg-line px-4 py-3 font-mono text-[15px] text-ink-3 cursor-not-allowed" />
+                                                <p className="text-[12px] text-ink-3 pl-1">NIK terikat permanen dengan akun korporat Anda.</p>
                                             </div>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="text-center space-y-6 py-2">
-                                        <div className="w-20 h-20 bg-[#064e3b]/20 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto shadow-inner">
-                                            <div className="w-14 h-14 bg-emerald-500/10 rounded-full flex items-center justify-center">
-                                                <Smartphone className="w-7 h-7 text-emerald-400" />
-                                            </div>
+                                    <div className="text-center space-y-5">
+                                        <p className="text-[14px] text-ink-2 leading-relaxed">
+                                            Pindai kode QR dengan Google Authenticator, Microsoft Authenticator, atau aplikasi sejenis.
+                                        </p>
+
+                                        <div className="mx-auto w-44 h-44 rounded-2xl bg-white p-4 flex items-center justify-center border border-line">
+                                            {isLoading && !mfaEnrollData ? (
+                                                <Loader2 className="w-7 h-7 animate-spin text-ink-3" strokeWidth={2} />
+                                            ) : mfaEnrollData?.qr ? (
+                                                <img src={mfaEnrollData.qr} alt="Kode QR MFA" className="w-full h-full object-contain" />
+                                            ) : (
+                                                <p className="text-[12px] text-ink-3 px-3">Kode QR gagal dimuat. Tutup lalu buka kembali.</p>
+                                            )}
                                         </div>
 
-                                        <div className="space-y-3">
-                                            <h4 className="text-2xl font-black text-white tracking-tight">Authenticator App</h4>
-                                            <p className="text-sm text-slate-400 px-4 leading-relaxed">
-                                                Gunakan aplikasi seperti Google Authenticator atau Microsoft Authenticator untuk mengamankan akun Anda.
-                                            </p>
-                                        </div>
-
-                                        <div className="relative group mx-auto w-48 h-48">
-                                            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-[2rem] blur opacity-75 group-hover:opacity-100 transition duration-500"></div>
-                                            <div className="relative p-5 bg-white rounded-[2rem] flex items-center justify-center shadow-2xl overflow-hidden">
-                                                {isLoading && !mfaEnrollData ? (
-                                                    <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
-                                                ) : mfaEnrollData?.qr ? (
-                                                    <img src={mfaEnrollData.qr} alt="MFA QR Code" className="w-full h-full object-contain" />
-                                                ) : (
-                                                    <div className="w-36 h-36 bg-slate-100 rounded-xl flex items-center justify-center text-[10px] font-black text-slate-400 border-2 border-dashed border-slate-300 uppercase tracking-widest text-center px-4">
-                                                        [QR CODE ERROR]
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex flex-col gap-1.5 group-hover:border-emerald-500/30 transition-colors">
-                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Manual Entry Key</span>
-                                                <p className="text-sm font-mono text-emerald-400 font-bold tracking-[0.1em] break-all select-all">
-                                                    {mfaEnrollData?.secret || '•••• •••• •••• ••••'}
+                                        <div className="space-y-3 text-left">
+                                            <div className="rounded-xl bg-elevated border border-line p-3.5 space-y-1">
+                                                <p className="text-[12px] text-ink-3">Kunci manual</p>
+                                                <p className="font-mono text-[13px] text-accent font-medium break-all select-all">
+                                                    {mfaEnrollData?.secret || 'Memuat kunci...'}
                                                 </p>
                                             </div>
-
-                                            <div className="px-4">
-                                                <div className="relative">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Masukkan kode 6-digit"
-                                                        value={mfaCode}
-                                                        onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-4 text-center text-xl font-black tracking-[0.5em] text-white focus:border-emerald-500 focus:outline-none transition-all placeholder:text-slate-700 placeholder:tracking-normal placeholder:text-sm"
-                                                        maxLength={6}
-                                                    />
-                                                </div>
+                                            <div className="space-y-1.5">
+                                                <label htmlFor="mfa-code" className="block text-[13px] font-medium text-ink-2 pl-1">Kode 6 digit</label>
+                                                <input
+                                                    id="mfa-code"
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    placeholder="000000"
+                                                    value={mfaCode}
+                                                    onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                                    className="w-full rounded-xl border border-line bg-elevated px-4 py-3 text-center text-xl font-mono tnum tracking-[0.4em] text-ink placeholder:text-line focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
+                                                    maxLength={6}
+                                                />
                                             </div>
                                         </div>
                                     </div>
                                 )}
 
-                                <div className="pt-4">
-                                    <button
-                                        onClick={() => handleSaveSettings(activeModal)}
-                                        disabled={isLoading}
-                                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3.5 rounded-xl transition-all shadow-xl shadow-emerald-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-[0.98]"
-                                    >
-                                        {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Save Changes'}
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={() => handleSaveSettings(activeModal)}
+                                    disabled={isLoading}
+                                    className="w-full rounded-full bg-accent hover:bg-accent-2 text-stage text-[15px] font-semibold py-3 transition-colors active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                                >
+                                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" strokeWidth={2} /> : 'Simpan'}
+                                </button>
                             </div>
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
-        </div>
+        </Shell>
     );
 }

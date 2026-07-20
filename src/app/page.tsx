@@ -1,25 +1,16 @@
 "use client";
 
 import { motion } from "framer-motion";
-import {
-  ShieldCheck,
-  ArrowRight,
-  Globe,
-  Zap,
-  AppWindow
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { loginAction } from "@/lib/actions/auth";
-import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,8 +19,6 @@ export default function LandingPage() {
 
     try {
       const systemEmail = identifier.includes('@') ? identifier : `${identifier.trim().toLowerCase()}@hcis.local`;
-
-      console.log('Attempting Login:', { systemEmail, password });
 
       const formData = new FormData();
       formData.append('email', systemEmail);
@@ -40,14 +29,13 @@ export default function LandingPage() {
       if (!result.success) {
         setError(result.message === 'Invalid login credentials'
           ? 'NIK atau password salah. Silakan coba lagi.'
-          : result.message || 'Login failed');
+          : result.message || 'Login gagal. Silakan coba lagi.');
         setIsLoading(false);
         return;
       }
 
-      console.log('Login successful, redirecting...');
       window.location.href = '/dashboard';
-    } catch (err: any) {
+    } catch (err) {
       console.error('Login error:', err);
       setError('Terjadi kesalahan sistem. Silakan coba beberapa saat lagi.');
       setIsLoading(false);
@@ -55,93 +43,85 @@ export default function LandingPage() {
   };
 
   return (
-    <main className="min-h-screen relative flex items-center justify-center overflow-hidden px-6">
-      {/* Dynamic Background Elements */}
-      <div className="absolute top-0 left-0 w-full h-full -z-10">
-        <div className="absolute top-[20%] left-[10%] w-72 h-72 bg-emerald-500/10 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[20%] right-[10%] w-96 h-96 bg-cyan-500/10 rounded-full blur-[120px] animate-pulse delay-700" />
+    <main className="relative min-h-[100dvh] bg-stage overflow-hidden flex items-center">
+      {/* Full-bleed cinematic backdrop */}
+      <img
+        src="https://picsum.photos/seed/ptpn-estate-cinematic/1920/1280"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full object-cover opacity-40"
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-stage via-stage/80 to-stage/30" />
+      <div className="absolute inset-0 bg-gradient-to-t from-stage via-transparent to-stage/60" />
+
+      {/* Brand mark, top-left */}
+      <div className="absolute top-6 left-6 lg:top-8 lg:left-14 flex items-center gap-2.5 z-10">
+        <span className="grid place-items-center w-9 h-9 rounded-lg bg-accent text-stage font-display font-extrabold text-lg leading-none">P</span>
+        <span className="leading-none">
+          <span className="block font-display font-extrabold tracking-tight text-ink">PTPN</span>
+          <span className="block text-[10px] tracking-[0.16em] uppercase text-ink-3 mt-0.5">OneAccess</span>
+        </span>
       </div>
 
-      <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-        {/* Left Column: Branding & Value Proposition */}
-        <motion.div
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8 }}
-          className="space-y-8"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 glass-card flex items-center justify-center text-emerald-400">
-              <ShieldCheck className="w-7 h-7" />
-            </div>
-            <span className="text-xl font-bold tracking-tight text-white/90">PTPN OneAccess</span>
-          </div>
-
-          <div className="space-y-4">
-            <h1 className="text-5xl lg:text-7xl font-extrabold leading-tight">
-              Enterprise <br />
-              <span className="premium-gradient-text">Digital Gateway</span>
+      <div className="relative z-10 w-full px-6 lg:px-14">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] items-center gap-12 max-w-6xl">
+          {/* Statement */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="max-w-xl hidden lg:block"
+          >
+            <h1 className="font-display text-5xl xl:text-7xl font-extrabold tracking-tight leading-[1.02] text-ink text-balance">
+              Gerbang digital PTPN Group.
             </h1>
-            <p className="text-lg text-slate-400 max-w-md leading-relaxed">
-              Satu gerbang, seluruh akses. Platform identitas dan gerbang kerja terintegrasi untuk ekosistem digital PTPN Group.
+            <p className="text-lg text-ink-2 leading-relaxed mt-6 max-w-md">
+              Akses aman dan terpusat untuk seluruh ekosistem aplikasi korporat, dalam satu identitas.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { icon: Globe, label: "Unified Access" },
-              { icon: Zap, label: "Enterprise Scale" }
-            ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3 text-sm text-slate-300">
-                <item.icon className="w-5 h-5 text-emerald-500" />
-                <span>{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Right Column: Portal Login Form */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          <div className="glass-card p-8 lg:p-10 space-y-8 relative overflow-hidden group">
-            {/* Glossy overlay effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-white">Sign In</h2>
-              <p className="text-sm text-slate-500 text-pretty">Gunakan identitas korporat PTPN Anda.</p>
+          {/* Sign-in card */}
+          <motion.div
+            initial={{ opacity: 0, y: 24, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full max-w-sm lg:w-[380px] rounded-2xl bg-panel/80 backdrop-blur-2xl border border-white/10 shadow-billboard p-8"
+          >
+            <div className="mb-7">
+              <h2 className="font-display text-2xl font-extrabold tracking-tight">Masuk</h2>
+              <p className="text-ink-2 mt-1.5 text-[14px]">Gunakan identitas korporat PTPN Anda.</p>
             </div>
 
             {error && (
-              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold">
+              <div className="mb-5 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-[13px] text-danger">
                 {error}
               </div>
             )}
 
             <form className="space-y-4" onSubmit={handleLogin}>
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Identity / NIK SAP</label>
+                <label htmlFor="identifier" className="block text-[13px] font-medium text-ink-2">NIK SAP</label>
                 <input
+                  id="identifier"
                   type="text"
+                  inputMode="numeric"
                   placeholder="Contoh: 3023255"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 transition-all focus:ring-4 focus:ring-emerald-500/5"
+                  className="w-full rounded-lg border border-line bg-elevated px-4 py-3 font-mono text-ink placeholder:text-ink-3 placeholder:font-sans focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/25 transition-colors"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Password</label>
+                <label htmlFor="password" className="block text-[13px] font-medium text-ink-2">Password</label>
                 <input
+                  id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Masukkan password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 transition-all focus:ring-4 focus:ring-emerald-500/5"
+                  className="w-full rounded-lg border border-line bg-elevated px-4 py-3 text-ink placeholder:text-ink-3 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/25 transition-colors"
                   required
                 />
               </div>
@@ -149,35 +129,25 @@ export default function LandingPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="glow-button w-full flex items-center justify-center gap-2 group mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 rounded-full bg-white text-stage font-semibold py-3 mt-1 transition-colors hover:bg-white/90 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Authenticating...' : 'Launch Services'}
-                {!isLoading && <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />}
+                {isLoading ? 'Memverifikasi...' : 'Masuk'}
+                {!isLoading && <ArrowRight className="w-4 h-4" strokeWidth={2.25} />}
               </button>
             </form>
 
-            <div className="pt-6 border-t border-slate-800/50 flex flex-wrap gap-4 justify-between items-center text-xs text-slate-500">
-              <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                All Systems Operational
-              </div>
-              <Link href="#" className="hover:text-emerald-400 transition-colors underline decoration-slate-800 underline-offset-4">
-                Lupa Password?
+            <div className="mt-6 pt-5 border-t border-line">
+              <Link href="#" className="text-[13px] text-accent hover:text-accent-2 font-medium transition-colors">
+                Lupa password?
               </Link>
             </div>
-          </div>
-
-          {/* Support Info */}
-          <div className="mt-8 text-center">
-            <p className="text-slate-600 text-[10px] uppercase tracking-[0.2em] font-medium">
-              POWERED BY PT Perkebunan Nusantara III (Persero)
-            </p>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
 
-      {/* Decorative Blur Object - Top Right */}
-      <div className="fixed -top-24 -right-24 w-96 h-96 bg-emerald-600/10 rounded-full blur-[100px] pointer-events-none" />
+      <p className="absolute bottom-6 left-6 lg:left-14 text-[12px] text-ink-3 z-10">
+        PT Perkebunan Nusantara III (Persero)
+      </p>
     </main>
   );
 }

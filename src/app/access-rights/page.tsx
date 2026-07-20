@@ -6,32 +6,40 @@ import {
     ShieldCheck,
     BarChart3,
     Layers,
-    Calendar,
-    MapPin,
+    Activity,
+    Globe,
+    Database,
+    Scale,
+    Briefcase,
     CheckCircle2,
     Loader2,
-    Lock,
-    History
+    Info,
+    type LucideIcon
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Sidebar } from "@/components/Sidebar";
-import { Header } from "@/components/Header";
+import { Shell } from "@/components/Shell";
 import { createClient } from "@/lib/supabase/client";
+import { categoryGradient } from "@/lib/constants/appVisuals";
+import { CountUp } from "@/components/CountUp";
 
-const IconMap: Record<string, any> = {
-    ShieldCheck,
-    BarChart3,
-    Users,
-    Layers
+const IconMap: Record<string, LucideIcon> = {
+    ShieldCheck, BarChart3, Users, Layers, Activity, Globe, Database, Scale, Briefcase
 };
+
+interface AccessAssignment {
+    app_name: string;
+    icon_name: string;
+    category: string;
+    role: string;
+    scope: string;
+    valid_until: string;
+}
 
 export default function AccessRightsPage() {
     const { user, isLoading: isAuthLoading } = useAuth();
-    const [accessList, setAccessList] = useState<any[]>([]);
+    const [accessList, setAccessList] = useState<AccessAssignment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState("");
-
     const [lastLogin, setLastLogin] = useState<string>("Baru saja");
 
     useEffect(() => {
@@ -39,6 +47,7 @@ export default function AccessRightsPage() {
             fetchAccess();
             fetchLastLogin();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     const fetchLastLogin = async () => {
@@ -50,10 +59,8 @@ export default function AccessRightsPage() {
                 .eq('action', 'login')
                 .order('created_at', { ascending: false })
                 .limit(1);
-
             if (logs?.[0]) {
-                const date = new Date(logs[0].created_at);
-                setLastLogin(date.toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }));
+                setLastLogin(new Date(logs[0].created_at).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }));
             }
         } catch (e) { }
     }
@@ -73,130 +80,117 @@ export default function AccessRightsPage() {
 
     if (isAuthLoading) {
         return (
-            <div className="min-h-screen bg-[#020617] flex items-center justify-center">
-                <Loader2 className="w-10 h-10 animate-spin text-emerald-500" />
+            <div className="min-h-[100dvh] bg-stage flex items-center justify-center">
+                <Loader2 className="w-7 h-7 animate-spin text-accent" strokeWidth={2} />
             </div>
         );
     }
 
+    const initials = user?.display_name?.split(' ').map(n => n[0]).slice(0, 2).join('') || 'U';
+
     return (
-        <div className="min-h-screen bg-[#020617] text-slate-50 flex font-sans">
-            <Sidebar />
+        <Shell>
+            {/* Cinematic profile hero (matches the app detail page) */}
+            <section className="relative w-full overflow-hidden">
+                <div className="absolute inset-0" style={{ background: categoryGradient(accessList[0]?.category || 'Human Capital') }} />
+                <div className="absolute inset-0 bg-gradient-to-t from-stage via-stage/70 to-stage/40" />
+                <div className="absolute inset-0 bg-gradient-to-r from-stage/80 via-transparent to-transparent" />
 
-            <div className="flex-1 ml-20 lg:ml-72 min-h-screen flex flex-col">
-                <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-
-                <main className="flex-1 p-8 lg:p-12 space-y-12">
-                    {/* Header */}
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20 text-[10px] font-black text-emerald-500 uppercase tracking-widest">
-                            Identity Governance
+                <div className="relative mx-auto max-w-5xl px-6 lg:px-8 pt-24 lg:pt-28 pb-10">
+                    <motion.div
+                        initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                    >
+                        <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/70 mb-4">Tata Kelola Identitas</p>
+                        <div className="flex items-center gap-5">
+                            <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-2xl bg-white/10 backdrop-blur-md text-white flex items-center justify-center text-2xl lg:text-3xl font-display font-extrabold overflow-hidden shrink-0 ring-1 ring-white/20">
+                                {user?.avatar_url ? (
+                                    <img src={user.avatar_url} alt={user?.display_name || "Profil"} className="w-full h-full object-cover" />
+                                ) : initials}
+                            </div>
+                            <div>
+                                <h1 className="font-display text-4xl lg:text-6xl font-extrabold tracking-tight leading-[1.02] text-white">{user?.display_name}</h1>
+                                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-2.5 text-[13px] text-white/75">
+                                    <span className="capitalize">{user?.subject_type}</span>
+                                    <span className="w-1 h-1 rounded-full bg-white/40" aria-hidden="true" />
+                                    <span className="font-mono tnum">NIK {user?.nik_sap}</span>
+                                    <span className="w-1 h-1 rounded-full bg-white/40" aria-hidden="true" />
+                                    <span className="flex items-center gap-1.5 text-good font-medium"><CheckCircle2 className="w-3.5 h-3.5" strokeWidth={2.5} /> Terverifikasi</span>
+                                    <span className="w-1 h-1 rounded-full bg-white/40" aria-hidden="true" />
+                                    <span>Login terakhir {lastLogin}</span>
+                                </div>
+                            </div>
                         </div>
-                        <h2 className="text-4xl lg:text-5xl font-black text-white tracking-tighter">My Access <span className="premium-gradient-text text-emerald-400">Rights.</span></h2>
-                        <p className="text-slate-500 font-medium max-w-2xl">
-                            Tinjauan transparan mengenai hak akses, peran, dan batasan operasional Anda di seluruh platform PTPN Nusantara.
-                        </p>
                     </motion.div>
+                </div>
+            </section>
 
-                    {/* Identity Card Mini */}
-                    <div className="glass-card p-8 flex flex-col md:flex-row gap-10 items-center justify-between bg-gradient-to-r from-slate-900/60 to-emerald-950/20 border-emerald-500/10">
-                        <div className="flex items-center gap-8">
-                            <div className="w-20 h-20 bg-emerald-600 rounded-3xl flex items-center justify-center text-white font-black text-2xl shadow-2xl shadow-emerald-500/20">
-                                {user?.display_name?.split(' ').map(n => n[0]).slice(0, 2).join('')}
+            {/* Assignments */}
+            <div className="mx-auto max-w-5xl px-6 lg:px-8 pt-4 pb-10">
+                <div className="flex items-baseline justify-between mb-4">
+                    <h2 className="font-display text-[22px] font-bold tracking-tight">Penugasan Aktif</h2>
+                    {!isLoading && accessList.length > 0 && <span className="text-[13px] text-ink-3 tnum"><CountUp value={accessList.length} /> aplikasi</span>}
+                </div>
+
+                {isLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="rounded-2xl bg-panel border border-line p-5 flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-xl skeleton shrink-0" />
+                                <div className="flex-1 space-y-2"><div className="h-4 w-1/2 rounded skeleton" /><div className="h-3.5 w-2/3 rounded skeleton" /></div>
                             </div>
-                            <div className="space-y-1">
-                                <h3 className="text-2xl font-black text-white">{user?.display_name}</h3>
-                                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">NIK: {user?.nik_sap} • {user?.subject_type}</p>
-                            </div>
-                        </div>
-                        <div className="flex gap-10">
-                            <div className="text-center md:text-left">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Status Keamanan</p>
-                                <div className="flex items-center gap-2 text-emerald-400 font-black text-sm">
-                                    <CheckCircle2 className="w-4 h-4" /> VERIFIED
-                                </div>
-                            </div>
-                            <div className="text-center md:text-left">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Terakhir Login</p>
-                                <div className="flex items-center gap-2 text-white font-black text-sm uppercase">
-                                    <History className="w-4 h-4 text-slate-500" /> {lastLogin}
-                                </div>
-                            </div>
-                        </div>
+                        ))}
                     </div>
-
-                    {/* Access Table / List */}
-                    <section className="space-y-6">
-                        <div className="flex items-center justify-between">
-                            <h4 className="text-xl font-black text-white uppercase tracking-tight">Active Assignments</h4>
-                            <div className="h-[1px] flex-1 mx-6 bg-slate-800/50" />
-                            <Lock className="w-5 h-5 text-slate-700 hover:text-emerald-500 transition-colors" />
-                        </div>
-
-                        <div className="space-y-4">
-                            {isLoading ? (
-                                <div className="flex justify-center py-20">
-                                    <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
-                                </div>
-                            ) : accessList.map((access, i) => {
-                                const Icon = IconMap[access.icon_name] || ShieldCheck;
-                                return (
-                                    <motion.div
-                                        key={i}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: i * 0.1 }}
-                                        className="glass-card p-6 flex flex-col lg:flex-row items-center gap-8 group"
-                                    >
-                                        <div className="w-14 h-14 bg-slate-800 rounded-2xl flex items-center justify-center group-hover:bg-emerald-500/10 transition-colors">
-                                            <Icon className="w-7 h-7 text-slate-400 group-hover:text-emerald-400" />
-                                        </div>
-
-                                        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 w-full">
-                                            <div className="space-y-1">
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Application</p>
-                                                <p className="text-lg font-black text-white group-hover:text-emerald-400 transition-colors">{access.app_name}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Assigned Role</p>
-                                                <p className="text-sm font-bold text-slate-300">{access.role}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Organization Scope</p>
-                                                <div className="flex items-center gap-2 text-sm font-bold text-slate-400">
-                                                    <MapPin className="w-3.5 h-3.5 text-emerald-500" /> {access.scope}
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Validity</p>
-                                                <div className="flex items-center gap-2 text-sm font-bold text-slate-400">
-                                                    <Calendar className="w-3.5 h-3.5 text-amber-500" /> {access.valid_until}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/10">
-                                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Active</span>
-                                        </div>
-                                    </motion.div>
-                                );
-                            })}
-                        </div>
-                    </section>
-
-                    {/* Disclaimer Header */}
-                    <div className="p-8 rounded-3xl bg-amber-500/5 border border-amber-500/10 flex items-start gap-4">
-                        <History className="w-5 h-5 text-amber-500 shrink-0 mt-1" />
-                        <div className="space-y-1">
-                            <p className="text-sm font-bold text-amber-500">Tinjauan Akses Berkala</p>
-                            <p className="text-xs text-slate-500 leading-relaxed">
-                                Data di atas adalah sinkronisasi real-time dari PTPN Enterprise IAM. Jika Anda menemukan ketidaksesuaian hak akses atau role yang tidak dikenali, harap segera hubungi administrator IT melalui menu IT Support.
-                            </p>
-                        </div>
+                ) : accessList.length === 0 ? (
+                    <div className="rounded-2xl bg-panel border border-line px-8 py-16 text-center space-y-3">
+                        <div className="w-14 h-14 rounded-[15px] bg-elevated text-ink-3 flex items-center justify-center mx-auto"><Users className="w-6 h-6" strokeWidth={1.75} /></div>
+                        <p className="text-[17px] font-semibold">Belum ada penugasan</p>
+                        <p className="text-[14px] text-ink-2">Hak akses yang disetujui Admin IAM akan tampil di sini.</p>
                     </div>
-                </main>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                        {accessList.map((access, i) => {
+                            const Icon = IconMap[access.icon_name] || ShieldCheck;
+                            return (
+                                <motion.div
+                                    key={i}
+                                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: Math.min(i * 0.05, 0.35), duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                                    className="rounded-2xl bg-panel border border-line hover:border-white/20 shadow-poster p-5 flex items-start gap-4 transition-colors"
+                                >
+                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shrink-0 ring-1 ring-white/10" style={{ background: categoryGradient(access.category) }}>
+                                        <Icon className="w-6 h-6" strokeWidth={1.75} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <p className="font-display text-[15px] font-bold tracking-tight truncate">{access.app_name}</p>
+                                            <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-good/12 px-2.5 py-0.5 text-[11px] font-semibold text-good">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-good" aria-hidden="true" /> Aktif
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-line">
+                                            <div><p className="text-[11px] text-ink-3">Peran</p><p className="text-[13px] font-medium mt-0.5 truncate">{access.role}</p></div>
+                                            <div><p className="text-[11px] text-ink-3">Lingkup</p><p className="text-[13px] font-medium mt-0.5 truncate">{access.scope}</p></div>
+                                            <div><p className="text-[11px] text-ink-3">Berlaku</p><p className="text-[13px] font-medium mt-0.5 truncate">{access.valid_until}</p></div>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* Review note */}
+                <div className="mt-6 rounded-2xl bg-panel border border-line p-5 flex items-start gap-3.5">
+                    <Info className="w-5 h-5 text-ink-3 shrink-0 mt-0.5" strokeWidth={2} />
+                    <div className="space-y-0.5">
+                        <p className="text-[14px] font-semibold">Tinjauan akses berkala</p>
+                        <p className="text-[13px] text-ink-2 leading-relaxed">
+                            Data ini tersinkronisasi langsung dari PTPN Enterprise IAM. Jika ada peran yang tidak Anda kenali, hubungi administrator IT melalui Pusat Bantuan.
+                        </p>
+                    </div>
+                </div>
             </div>
-        </div>
+        </Shell>
     );
 }

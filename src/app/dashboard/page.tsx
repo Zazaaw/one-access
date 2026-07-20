@@ -2,40 +2,46 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    LayoutGrid,
-    ExternalLink,
-    ShieldCheck,
-    BarChart3,
-    Users,
-    Layers,
-    HelpCircle,
-    Briefcase,
-    Loader2,
-    ChevronRight
+    ShieldCheck, BarChart3, Users, Layers, Activity, Globe, Database, Scale, Briefcase, LayoutGrid,
+    Play, Info, ArrowRight, Loader2,
+    type LucideIcon
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Application } from "@/lib/types/iam";
 import { useAuth } from "@/context/AuthContext";
-import { Sidebar } from "@/components/Sidebar";
-import { Header } from "@/components/Header";
+import { Shell } from "@/components/Shell";
+import { Shelf } from "@/components/tv/Shelf";
+import { PosterCard } from "@/components/tv/PosterCard";
+import { HeroMedia } from "@/components/tv/HeroMedia";
+import { launchAppWithSSO } from "@/lib/launch";
 
-const IconMap: Record<string, any> = {
-    ShieldCheck,
-    BarChart3,
-    Users,
-    Layers
+const IconMap: Record<string, LucideIcon> = {
+    ShieldCheck, BarChart3, Users, Layers, Activity, Globe, Database, Scale, Briefcase
 };
+
+function BillboardSkeleton() {
+    return (
+        <div className="relative h-[66vh] min-h-[460px] w-full skeleton">
+            <div className="absolute inset-0 bg-gradient-to-t from-stage via-stage/40 to-transparent" />
+        </div>
+    );
+}
+
 
 export default function DashboardPage() {
     const { user, isLoading: isAuthLoading } = useAuth();
+    const router = useRouter();
     const [apps, setApps] = useState<Application[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState("");
+    const [slide, setSlide] = useState(0);
+    const [heroLogoOk, setHeroLogoOk] = useState(true); // reset when the billboard slide changes
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
-        if (user) {
-            fetchMyApps();
-        }
+        if (user) fetchMyApps();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     const fetchMyApps = async () => {
@@ -43,25 +49,14 @@ export default function DashboardPage() {
         try {
             const res = await fetch('/api/my-apps');
             const data = await res.json();
-            if (Array.isArray(data)) {
-                setApps(data);
-            } else {
-                setApps([]);
-            }
-
-            // Audit Log: Login (Client-side trigger on first load)
+            setApps(Array.isArray(data) ? data : []);
             if (user && !sessionStorage.getItem('login_audited')) {
                 fetch('/api/audit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        subject_id: user.subject_id,
-                        action: 'login',
-                        metadata: {
-                            device: navigator.userAgent.split(' (')[1]?.split(';')[0] || 'Unknown Device',
-                            location: 'Enterprise Portal',
-                            ip: 'client-ip'
-                        }
+                        subject_id: user.subject_id, action: 'login',
+                        metadata: { device: navigator.userAgent.split(' (')[1]?.split(';')[0] || 'Unknown Device', location: 'Enterprise Portal', ip: 'client-ip' }
                     })
                 });
                 sessionStorage.setItem('login_audited', 'true');
@@ -73,181 +68,175 @@ export default function DashboardPage() {
         }
     };
 
-    const handleLaunchApp = async (app: Application) => {
-        if (!user) return;
+    const openDetail = useCallback((app: Application) => router.push(`/app/${app.app_code}`), [router]);
+    const launch = useCallback((app: Application) => {
+        if (user) launchAppWithSSO(app, user.subject_id);
+    }, [user]);
 
-        let finalUrl = app.launch_url;
+    // Reset logo-error guard whenever the visible billboard changes
+    useEffect(() => { setHeroLogoOk(true); }, [slide]);
 
-        // SSO: Append tokens if available and app is internal (localhost or known domain)
-        try {
-            const supabase = await import('@/lib/supabase/client').then(m => m.createClient());
-            const { data: { session } } = await supabase.auth.getSession();
+    // Billboard carousel (top 5 apps), auto-advance
+    const billboards = apps.slice(0, Math.min(5, apps.length));
+    useEffect(() => {
+        if (billboards.length < 2) return;
+        timerRef.current = setInterval(() => {
+            setSlide(s => (s + 1) % billboards.length);
+        }, 6000);
+        return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    }, [billboards.length]);
 
-            if (session?.access_token && session?.refresh_token) {
-                const separator = app.launch_url.includes('?') ? '&' : '?';
-                const tokens = `access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
-                finalUrl = `${app.launch_url}${separator}${tokens}`;
-            }
-        } catch (err) {
-            console.warn("Failed to attach SSO tokens:", err);
-        }
-
-        try {
-            await fetch('/api/audit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    subject_id: user.subject_id,
-                    app_id: app.id,
-                    action: 'launch',
-                    metadata: { app_name: app.app_name, url: app.launch_url }
-                })
-            });
-        } catch (e) {
-            console.error("Audit logging failed", e);
-        }
-
-        window.open(finalUrl, '_blank');
-    };
-
-    const filteredApps = apps.filter(app =>
-        app.app_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        app.category.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const greeting = (() => {
+        const h = new Date().getHours();
+        if (h < 11) return "Selamat pagi";
+        if (h < 15) return "Selamat siang";
+        if (h < 19) return "Selamat sore";
+        return "Selamat malam";
+    })();
 
     if (isAuthLoading) {
-        return (
-            <div className="min-h-screen bg-[#020617] flex items-center justify-center">
-                <Loader2 className="w-10 h-10 animate-spin text-emerald-500" />
-            </div>
-        );
+        return <div className="min-h-[100dvh] bg-stage flex items-center justify-center"><Loader2 className="w-7 h-7 animate-spin text-accent" strokeWidth={2} /></div>;
     }
-
     if (!user) {
         window.location.href = '/';
         return null;
     }
 
+    const hasApps = apps.length > 0;
+    const current = billboards[slide] ?? apps[0];
+    const CurIcon = current ? (IconMap[current.icon_name] || LayoutGrid) : LayoutGrid;
+    const categories = Array.from(new Set(apps.map(a => a.category)));
+    const topApps = apps.slice(0, Math.min(10, apps.length));
+
     return (
-        <div className="min-h-screen bg-[#020617] text-slate-50 flex font-sans">
-            <Sidebar />
+        <Shell>
+            {/* BILLBOARD CAROUSEL */}
+            {isLoading ? (
+                <BillboardSkeleton />
+            ) : hasApps ? (
+                <section className="relative h-[66vh] min-h-[460px] w-full overflow-hidden">
+                    <AnimatePresence mode="popLayout">
+                        <HeroMedia key={current.id} app={current} animateKey={current.id} />
+                    </AnimatePresence>
+                    <div className="absolute inset-0 bg-gradient-to-t from-stage via-stage/45 to-stage/15" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-stage/85 via-transparent to-transparent" />
 
-            <div className="flex-1 ml-20 lg:ml-72 min-h-screen flex flex-col">
-                <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-
-                <main className="flex-1 p-8 lg:p-12 space-y-12">
-                    {/* Welcome Intro */}
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-                        <h2 className="text-4xl lg:text-5xl font-black text-white tracking-tighter">Safe access, <span className="premium-gradient-text text-emerald-400">anywhere.</span></h2>
-                        <div className="flex items-center gap-3">
-                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                            <p className="text-slate-500 font-medium text-sm">PTPN OneAccess ID: {user?.nik_sap} • Connected to Enterprise IAM</p>
-                        </div>
-                    </motion.div>
-
-                    {/* Strategic Banner */}
-                    <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="relative overflow-hidden p-10 lg:p-16 rounded-[40px] border border-slate-800/50 bg-slate-900/30 group">
-                        <div className="absolute top-0 right-0 w-2/3 h-full bg-gradient-to-l from-emerald-500/5 via-cyan-500/5 to-transparent -z-10 group-hover:scale-110 transition-transform duration-1000" />
-                        <div className="relative z-10 space-y-6 max-w-3xl">
-                            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">Board Perspective</span>
-                            </div>
-                            <h3 className="text-5xl lg:text-6xl font-black text-white leading-[1] tracking-tighter">
-                                Drive <span className="premium-gradient-text">Transformation</span> with Integrated Data.
-                            </h3>
-                            <p className="text-slate-400 text-xl leading-relaxed max-w-2xl font-medium">
-                                Pondasi digital untuk ketahanan bisnis dan efisiensi operasional PTPN Group di era industri 4.0.
-                            </p>
-                        </div>
-                    </motion.div>
-
-                    {/* Integrated Services Grid */}
-                    <section className="space-y-8">
-                        <div className="flex items-center justify-between">
-                            <h4 className="text-2xl font-black text-white flex items-center gap-4 tracking-tight">
-                                <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
-                                    <LayoutGrid className="w-5 h-5 text-emerald-500" />
-                                </div>
-                                Authorized Applications
-                            </h4>
-                            <div className="text-sm text-slate-500 font-bold uppercase tracking-widest">{filteredApps.length} Apps Available</div>
-                        </div>
-
+                    <div className="relative h-full flex flex-col justify-end px-6 lg:px-14 pb-14 lg:pb-16 max-w-3xl">
                         <AnimatePresence mode="wait">
-                            {isLoading ? (
-                                <div className="h-64 flex flex-col items-center justify-center gap-4 text-slate-500">
-                                    <Loader2 className="w-10 h-10 animate-spin text-emerald-500" />
-                                    <p className="text-sm font-bold uppercase tracking-widest">Synchronizing Access...</p>
+                            <motion.div
+                                key={current.id}
+                                initial={{ opacity: 0, y: 18 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                            >
+                                <p className="text-[13px] font-medium text-white/70 mb-4">{greeting}, {user?.display_name?.split(' ')[0]}</p>
+                                {/* App Store-style lockup: big square app icon + title, vertically centered */}
+                                <div className="flex items-center gap-4 lg:gap-5">
+                                    {current.logo_url && heroLogoOk ? (
+                                        <img
+                                            src={current.logo_url}
+                                            alt=""
+                                            onError={() => setHeroLogoOk(false)}
+                                            className="w-20 h-20 lg:w-24 lg:h-24 rounded-[22px] object-cover ring-1 ring-white/15 shadow-billboard shrink-0"
+                                        />
+                                    ) : (
+                                        <span className="grid place-items-center w-20 h-20 lg:w-24 lg:h-24 rounded-[22px] bg-white/12 backdrop-blur-sm text-white ring-1 ring-white/15 shrink-0">
+                                            <CurIcon className="w-9 h-9" strokeWidth={1.5} />
+                                        </span>
+                                    )}
+                                    <div className="min-w-0">
+                                        <p className="text-[12px] lg:text-[13px] font-semibold uppercase tracking-[0.16em] text-white/60 mb-1.5">{current.category}</p>
+                                        <h1 className="font-display text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.05] text-white line-clamp-2">{current.app_name}</h1>
+                                    </div>
                                 </div>
-                            ) : (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                    {filteredApps.map((app, i) => {
-                                        const Icon = IconMap[app.icon_name] || LayoutGrid;
-                                        return (
-                                            <motion.button
-                                                key={app.id}
-                                                initial={{ opacity: 0, y: 20 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: i * 0.1 }}
-                                                onClick={() => handleLaunchApp(app)}
-                                                className="glass-card p-10 flex flex-col items-start gap-8 hover:translate-y-[-8px] transition-all duration-500 group text-left w-full h-full relative"
-                                            >
-                                                <div className="flex justify-between items-start w-full">
-                                                    <div className="w-16 h-16 bg-slate-800/50 border border-slate-700/50 rounded-3xl flex items-center justify-center group-hover:bg-emerald-500/10 group-hover:border-emerald-500/30 transition-all duration-500 shadow-xl">
-                                                        <Icon className="w-8 h-8 text-slate-400 group-hover:text-emerald-400 group-hover:scale-110 transition-all duration-500" />
-                                                    </div>
-                                                    {/* Notification Badge for Command Center */}
-                                                    {app.app_name.includes("Command Center") && (
-                                                        <motion.div
-                                                            initial={{ scale: 0 }}
-                                                            animate={{ scale: 1 }}
-                                                            className="px-3 py-1 bg-rose-500 text-white text-[10px] font-black rounded-full shadow-[0_0_20px_rgba(244,63,94,0.4)] border-2 border-[#020617]"
-                                                        >
-                                                            3 Pending
-                                                        </motion.div>
-                                                    )}
-                                                </div>
-                                                <div className="space-y-3">
-                                                    <p className="text-[10px] font-black text-emerald-500/60 uppercase tracking-[0.2em]">{app.category}</p>
-                                                    <h5 className="text-2xl font-black text-white tracking-tight group-hover:text-emerald-400 transition-colors uppercase">{app.app_name}</h5>
-                                                    <p className="text-sm text-slate-500 leading-relaxed font-medium line-clamp-2">{app.description}</p>
-                                                </div>
-                                                <div className="mt-4 pt-6 border-t border-slate-800/50 w-full flex items-center justify-between group-hover:border-emerald-500/20 transition-colors">
-                                                    <div className="flex items-center gap-2">
-                                                        {app.is_pwa && <span className="text-[8px] font-black bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/10">PWA READY</span>}
-                                                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest group-hover:text-slate-400 transition-colors">Connect Service</span>
-                                                    </div>
-                                                    <ChevronRight className="w-4 h-4 text-slate-700 group-hover:translate-x-1 group-hover:text-emerald-400 transition-all" />
-                                                </div>
-                                            </motion.button>
-                                        );
-                                    })}
-                                </motion.div>
-                            )}
+                                <p className="text-[15px] lg:text-[17px] text-white/85 mt-5 leading-relaxed max-w-xl line-clamp-2">{current.description}</p>
+                                {current.creator && (
+                                    <p className="text-[13px] text-white/60 mt-3">
+                                        <span className="text-white/45">Developer </span>
+                                        <span className="font-semibold text-white/85">{current.creator}</span>
+                                        {current.publisher && <span> · {current.publisher}</span>}
+                                    </p>
+                                )}
+                                <div className="flex items-center gap-3 mt-7">
+                                    <button onClick={() => launch(current)} className="flex items-center gap-2 rounded-full bg-white text-stage font-semibold px-7 py-3 text-[15px] hover:bg-white/90 transition-colors active:scale-[0.98]">
+                                        <Play className="w-4 h-4 fill-current" strokeWidth={0} /> Buka
+                                    </button>
+                                    <button onClick={() => openDetail(current)} className="flex items-center gap-2 rounded-full bg-white/12 backdrop-blur-sm text-white font-semibold px-6 py-3 text-[15px] hover:bg-white/20 transition-colors ring-1 ring-white/15">
+                                        <Info className="w-4 h-4" strokeWidth={2} /> Detail
+                                    </button>
+                                </div>
+                            </motion.div>
                         </AnimatePresence>
-                    </section>
 
-                    {/* Secondary Grid */}
-                    <section className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-32">
-                        <div className="p-10 lg:p-12 rounded-[40px] border border-slate-800/50 bg-slate-900/10 space-y-6 hover:bg-slate-900/20 transition-all group">
-                            <div className="w-14 h-14 bg-cyan-500/10 rounded-2xl flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-all">
-                                <HelpCircle className="w-7 h-7" />
+                        {/* Dot indicators */}
+                        {billboards.length > 1 && (
+                            <div className="flex items-center gap-2 mt-8">
+                                {billboards.map((b, i) => (
+                                    <button
+                                        key={b.id}
+                                        onClick={() => setSlide(i)}
+                                        aria-label={`Slide ${i + 1}`}
+                                        className={`h-1.5 rounded-full transition-all ${i === slide ? 'w-6 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/60'}`}
+                                    />
+                                ))}
                             </div>
-                            <h5 className="text-2xl font-black text-white uppercase tracking-tight">Support Center</h5>
-                            <button className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em] flex items-center gap-2">Launch Ticket Center <ChevronRight className="w-3 h-3" /></button>
-                        </div>
-                        <div className="p-10 lg:p-12 rounded-[40px] border border-slate-800/50 bg-slate-900/10 space-y-6 hover:bg-slate-900/20 transition-all group">
-                            <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-all">
-                                <Briefcase className="w-7 h-7" />
-                            </div>
-                            <h5 className="text-2xl font-black text-white uppercase tracking-tight">Governance Docs</h5>
-                            <button className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] flex items-center gap-2">Browse Repository <ChevronRight className="w-3 h-3" /></button>
-                        </div>
-                    </section>
-                </main>
-            </div>
-            <div className="fixed top-[-10%] right-[-10%] w-[1000px] h-[1000px] bg-emerald-500/5 rounded-full blur-[200px] -z-10 pointer-events-none" />
-        </div>
+                        )}
+                    </div>
+                </section>
+            ) : (
+                <section className="relative h-[56vh] min-h-[400px] w-full flex items-center px-6 lg:px-14">
+                    <div className="absolute inset-0 bg-gradient-to-br from-panel to-stage" />
+                    <div className="relative max-w-xl">
+                        <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-accent mb-3">{greeting}, {user?.display_name?.split(' ')[0]}</p>
+                        <h1 className="font-display text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.05]">Belum ada aplikasi di pustaka Anda.</h1>
+                        <p className="text-[15px] text-ink-2 mt-4 leading-relaxed">Jelajahi katalog dan ajukan akses ke aplikasi yang Anda butuhkan.</p>
+                        <Link href="/app-catalog" className="inline-flex items-center gap-2 rounded-full bg-accent text-stage font-semibold px-6 py-3 text-[15px] mt-7 hover:bg-accent-2 transition-colors">
+                            Jelajahi katalog <ArrowRight className="w-4 h-4" strokeWidth={2.25} />
+                        </Link>
+                    </div>
+                </section>
+            )}
+
+            {/* SHELVES */}
+            {hasApps && (
+                <div className="relative z-10 -mt-4 lg:-mt-6 space-y-9 lg:space-y-11">
+                    {/* Continue - landscape 16:9 (Apple TV "Continue Watching") */}
+                    <Shelf title="Lanjutkan" action={<Link href="/app-catalog" className="text-[13px] font-medium text-ink-2 hover:text-ink transition-colors mr-1">Semua</Link>}>
+                        {apps.map((app) => (
+                            <PosterCard
+                                key={app.id}
+                                app={app}
+                                layout="landscape"
+                                onClick={() => openDetail(app)}
+                                badge={app.app_name.includes("Command Center") ? "3" : undefined}
+                            />
+                        ))}
+                    </Shelf>
+
+                    {/* Top 10 - portrait posters with giant rank numerals */}
+                    {topApps.length >= 3 && (
+                        <Shelf title="Top Aplikasi PTPN">
+                            {topApps.map((app, i) => (
+                                <PosterCard key={app.id} app={app} rank={i + 1} onClick={() => openDetail(app)} />
+                            ))}
+                        </Shelf>
+                    )}
+
+                    {/* Category shelves - portrait */}
+                    {categories.length > 1 && categories.map(cat => {
+                        const catApps = apps.filter(a => a.category === cat);
+                        if (catApps.length === 0) return null;
+                        return (
+                            <Shelf key={cat} title={cat}>
+                                {catApps.map(app => (
+                                    <PosterCard key={app.id} app={app} onClick={() => openDetail(app)} />
+                                ))}
+                            </Shelf>
+                        );
+                    })}
+                </div>
+            )}
+        </Shell>
     );
 }
